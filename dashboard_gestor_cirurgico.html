@@ -50,6 +50,7 @@ html[data-tema="escuro"] .campo input, html[data-tema="escuro"] .sel-status{colo
 
 *{box-sizing:border-box;margin:0;padding:0}
 html{font-size:16px}
+html,body{overflow-x:hidden}
 body{font-family:var(--corpo);background:var(--papel);color:var(--grafite);line-height:1.55;min-height:100vh}
 button{font-family:inherit;cursor:pointer}
 :focus-visible{outline:3px solid var(--verde);outline-offset:2px;border-radius:4px}
@@ -266,16 +267,17 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 
 @media (max-width: 640px){
   /* cabeçalho compacto: só logo + nome + botões-ícone */
-  header.topo{padding:10px 12px;gap:10px;flex-wrap:nowrap}
-  .marca{font-size:.98rem;min-width:0;flex:1}
+  header.topo{padding:10px 10px;gap:7px;flex-wrap:nowrap}
+  .marca{font-size:.94rem;min-width:0;flex:1}
   .marca #titulo-app{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .marca small{font-size:.62rem}
+  .marca small{font-size:.6rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .aovivo{display:none}
   .usuario{display:none}
-  .logo-medico{height:28px;max-width:90px}
-  .btn-sair{padding:6px 10px;font-size:.76rem}
+  .logo-medico{height:26px;max-width:70px}
+  .btn-sair{padding:6px 8px;font-size:.72rem;white-space:nowrap;flex-shrink:0}
   /* KPIs em 2 colunas firmes */
   .kpis{grid-template-columns:1fr 1fr;gap:8px}
+  .kpis .kpi:last-child:nth-child(odd){grid-column:1/-1}
   .kpi{padding:11px 12px}
   .kpi .valor{font-size:1.25rem}
   .kpi .sub{font-size:.7rem}
