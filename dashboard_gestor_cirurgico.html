@@ -317,6 +317,14 @@ main{max-width:1240px;margin:0 auto;padding:26px 28px 60px}
       <div class="painel-corpo" id="radar"></div>
     </section>
 
+    <section class="painel" aria-label="Comparador de convênios" style="margin-top:22px">
+      <div class="painel-cab">
+        <h2>Comparador de convênios</h2>
+        <span class="conta" id="cc-conta"></span>
+      </div>
+      <div class="painel-corpo" id="comparador"></div>
+    </section>
+
     <section class="painel" aria-label="Minha tabela de valores" style="margin-top:22px">
       <div class="painel-cab">
         <h2>Minha tabela de valores</h2>
@@ -567,6 +575,7 @@ async function carregarTudo(){
   carregarConciliacao();
   carregarAgenda();
   carregarRadar();
+  carregarComparador();
   mvListar();
 }
 
@@ -1049,6 +1058,60 @@ async function carregarRadar(){
     alvo.innerHTML = html;
   } catch (e) {
     alvo.innerHTML = '<div class="vazio">Radar indisponível: ' + (e.message || e) + '</div>';
+  }
+}
+
+/* ---------- comparador de convênios ---------- */
+async function carregarComparador(){
+  const alvo = $("comparador");
+  try {
+    const { data, error } = await sb.from("vw_cirurgias_completa")
+      .select("convenio_ref,convenio_nome,status,valor_previsto,total_pago,total_glosado_aberto,data_realizacao,faturada_em,data_pagamento,created_at")
+      .neq("status", "cancelada");
+    if (error) throw error;
+    const porConv = {};
+    (data || []).forEach(c => {
+      const k = c.convenio_ref || c.convenio_nome || "Sem convênio";
+      if (!porConv[k]) porConv[k] = { qtd: 0, previsto: 0, pago: 0, glosado: 0, prazos: [] };
+      const v = porConv[k];
+      v.qtd++;
+      v.previsto += Number(c.valor_previsto || 0);
+      v.pago += Number(c.total_pago || 0);
+      v.glosado += Number(c.total_glosado_aberto || 0);
+      if (c.status === "paga" && c.data_pagamento) {
+        const base = c.faturada_em || c.data_realizacao || (c.created_at ? String(c.created_at).slice(0, 10) : null);
+        if (base) {
+          const d = Math.round((new Date(c.data_pagamento) - new Date(base)) / 86400000);
+          if (d >= 0 && d < 400) v.prazos.push(d);
+        }
+      }
+    });
+    const convs = Object.keys(porConv).filter(k => porConv[k].qtd > 0).sort((a, b) => porConv[b].previsto - porConv[a].previsto);
+    $("cc-conta").textContent = convs.length ? convs.length + " convênio(s)" : "";
+    if (!convs.length) {
+      alvo.innerHTML = '<div class="vazio">Sem cirurgias registradas ainda para comparar convênios.</div>';
+      return;
+    }
+    let html = '<p style="font-size:.82rem;color:var(--cinza);margin-bottom:10px">Com o tempo, esta tabela mostra qual convênio paga melhor e mais rápido — use na hora de renegociar ou priorizar.</p>' +
+      '<table><thead><tr><th>Convênio</th><th class="num">Cirurgias</th><th class="num">Ticket médio</th><th class="num hide-sm">% recebido</th><th class="num hide-sm">Prazo médio</th><th class="num hide-sm">Glosa aberta</th></tr></thead><tbody>';
+    convs.forEach(k => {
+      const v = porConv[k];
+      const ticket = v.previsto / v.qtd;
+      const pctRecebido = v.previsto > 0 ? Math.round((v.pago / v.previsto) * 100) : 0;
+      const prazo = v.prazos.length ? Math.round(v.prazos.reduce((s, d) => s + d, 0) / v.prazos.length) + " dias" : "—";
+      html += `<tr>
+        <td class="med-name">${escHtml(k)}</td>
+        <td class="num">${v.qtd}</td>
+        <td class="num">${brl.format(ticket)}</td>
+        <td class="num hide-sm">${pctRecebido}%</td>
+        <td class="num hide-sm">${prazo}</td>
+        <td class="num hide-sm">${v.glosado > 0 ? brl.format(v.glosado) : "—"}</td>
+      </tr>`;
+    });
+    html += "</tbody></table>";
+    alvo.innerHTML = html;
+  } catch (e) {
+    alvo.innerHTML = '<div class="vazio">Comparador indisponível: ' + (e.message || e) + '</div>';
   }
 }
 
