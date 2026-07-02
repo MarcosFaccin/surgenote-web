@@ -454,21 +454,6 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 
     <div class="grade">
       <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
-        <section class="painel" aria-label="Fila de solicitações" style="flex:1">
-          <div class="painel-cab">
-            <h2>Fila de confirmação</h2>
-            <span class="conta" id="fila-conta"></span>
-            <button class="recarregar" id="btn-recarregar">Atualizar</button>
-          </div>
-          <div class="painel-corpo" id="fila"></div>
-        </section>
-      </div>
-
-      <aside style="display:flex;flex-direction:column;gap:16px">
-        <section class="painel" aria-label="Pipeline por status">
-          <div class="painel-cab"><h2>Pipeline do mês</h2></div>
-          <div class="painel-corpo" id="pipeline"></div>
-        </section>
         <section class="painel" aria-label="Lançamento manual de cirurgia">
           <div class="painel-cab">
             <h2>Lançar cirurgia</h2>
@@ -495,6 +480,21 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
               <button class="btn btn-recusar" id="lc-fechar">Fechar</button>
             </div>
           </div>
+        </section>
+        <section class="painel" aria-label="Fila de solicitações" style="flex:1">
+          <div class="painel-cab">
+            <h2>Fila de confirmação</h2>
+            <span class="conta" id="fila-conta"></span>
+            <button class="recarregar" id="btn-recarregar">Atualizar</button>
+          </div>
+          <div class="painel-corpo" id="fila"></div>
+        </section>
+      </div>
+
+      <aside style="display:flex;flex-direction:column;gap:16px">
+        <section class="painel" aria-label="Pipeline por status">
+          <div class="painel-cab"><h2>Pipeline do mês</h2></div>
+          <div class="painel-corpo" id="pipeline"></div>
         </section>
         <section class="painel" aria-label="Movimentações recentes">
           <div class="painel-cab"><h2>Recentes</h2></div>
