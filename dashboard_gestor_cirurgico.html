@@ -288,7 +288,16 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
   .painel-cab{padding:10px 12px}
   .painel-corpo{padding:8px 12px 12px}
   .recente{flex-wrap:wrap;gap:8px}
-  .recente .info{flex:1 1 100%}
+  .recente .info{flex:1 1 100%;min-width:0}
+  /* nomes quebram em até 2 linhas em vez de cortar com reticências */
+  .recente .info .nome{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3}
+  .recente .info .sub{white-space:normal}
+  .cartao h3{font-size:.95rem;word-break:break-word}
+  .meta{gap:4px 12px}
+  .meta span{min-width:0;word-break:break-word}
+  .vazio{padding:18px 12px;font-size:.86rem}
+  .painel-cab h2{font-size:.95rem;min-width:0}
+  .painel-cab{flex-wrap:wrap;gap:4px 10px}
   table{font-size:.82rem;min-width:420px}
   thead th.hide-sm,tbody td.hide-sm{display:none}
   thead th,tbody td{padding:9px 10px}
