@@ -240,7 +240,20 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .lt-item .lt-quando{font-size:.72rem;color:var(--cinza);font-family:var(--mono)}
 .lt-item .lt-oq{font-size:.9rem;font-weight:600}
 .lt-item .lt-extra{font-size:.8rem;color:var(--cinza)}
+.dt-composicao{border-top:1px solid var(--linha);padding:12px 0 14px}
+.dt-item{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:.85rem;border-bottom:1px dashed var(--linha)}
+.dt-item .nm{flex:1;min-width:0}
+.dt-item .pct{font-family:var(--mono);font-size:.76rem;color:var(--cinza);white-space:nowrap}
+.dt-item .via{font-size:.7rem;padding:2px 8px;border-radius:99px;border:1px solid var(--linha);background:var(--papel);cursor:pointer;white-space:nowrap}
+.dt-item .rm{background:none;border:none;color:var(--vermelho);font-size:.95rem;padding:0 4px}
 .dt-pagamento{border-top:1px solid var(--linha);padding-top:14px}
+
+/* contratos */
+.contrato{border:1px solid var(--linha);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.contrato-nome{font-family:var(--display);font-weight:700;color:var(--titulo);margin-bottom:8px}
+.contrato-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.ct-campo span{display:block;font-size:.66rem;font-weight:600;color:var(--cinza);margin-bottom:3px}
+.ct-campo input{width:100%;padding:7px 8px;border:1px solid var(--linha);border-radius:7px;font:inherit;font-size:.86rem;background:var(--papel);color:var(--grafite)}
 
 /* toast */
 #toasts{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:50}
@@ -526,6 +539,14 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
         <div id="mv-lista"></div>
       </div>
     </section>
+
+    <section class="painel" aria-label="Meus contratos" style="margin-top:16px">
+      <div class="painel-cab"><h2>Meus contratos</h2></div>
+      <div class="painel-corpo">
+        <p style="font-size:.82rem;color:var(--cinza);margin-bottom:12px">Regras de pagamento de cada convênio (deflator/ágio sobre a tabela, percentuais de múltiplos procedimentos, urgência e participação). Usadas no "Recalcular valor" da cirurgia.</p>
+        <div id="contratos"></div>
+      </div>
+    </section>
     </div>
   </main>
 </div>
@@ -541,6 +562,30 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
     </div>
     <div class="modal-corpo">
       <div id="dt-linha-tempo" class="linha-tempo"></div>
+
+      <div class="dt-composicao">
+        <span class="ap-rotulo">Composição do honorário (contrato)</span>
+        <div id="dt-itens"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <input id="dt-add-proc" class="sel-status" list="dt-proc-lista" placeholder="adicionar procedimento (3+ letras)" autocomplete="off" style="flex:1;min-width:170px;padding:9px;font-size:16px">
+          <datalist id="dt-proc-lista"></datalist>
+          <button class="btn btn-confirmar" id="dt-add-btn" style="padding:8px 12px;font-size:.8rem">+ Incluir</button>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:10px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:.84rem"><input type="checkbox" id="dt-urgencia"> Urgência/emergência</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.84rem">Participação:
+            <select id="dt-papel" class="sel-status" style="padding:6px">
+              <option value="cirurgiao">Cirurgião principal</option>
+              <option value="aux1">1º auxiliar</option>
+              <option value="aux2">2º auxiliar</option>
+              <option value="instrumentador">Instrumentador</option>
+            </select>
+          </label>
+          <button class="btn btn-confirmar" id="dt-recalcular" style="padding:8px 14px;font-size:.82rem">Recalcular valor</button>
+        </div>
+        <div id="dt-memoria" style="font-size:.8rem;color:var(--cinza);margin-top:8px"></div>
+      </div>
+
       <div class="dt-pagamento">
         <span class="ap-rotulo">Registrar pagamento recebido</span>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -735,6 +780,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("dt-fechar").addEventListener("click", () => { $("detalhe-fundo").hidden = true; });
   $("detalhe-fundo").addEventListener("click", (e) => { if (e.target.id === "detalhe-fundo") $("detalhe-fundo").hidden = true; });
   $("dt-pg-salvar").addEventListener("click", dtRegistrarPagamento);
+  $("dt-add-btn").addEventListener("click", dtIncluirItem);
+  $("dt-recalcular").addEventListener("click", dtRecalcular);
+  $("dt-add-proc").addEventListener("input", () => { clearTimeout(dtProcTimer); dtProcTimer = setTimeout(dtSugerirProc, 300); });
   $("ag-proc").addEventListener("input", () => {
     clearTimeout(agProcTimer);
     agProcTimer = setTimeout(agSugerirProcedimentos, 300);
@@ -818,6 +866,7 @@ async function carregarTudo(){
   carregarComparador();
   carregarGrafico30();
   mvListar();
+  carregarContratos();
 }
 
 async function carregarConciliacao(){
@@ -1582,6 +1631,7 @@ async function abrirDetalhe(cirurgiaId){
   $("dt-pg-valor").value = saldo > 0 ? saldo.toFixed(2) : "";
   $("dt-pg-data").value = new Date().toISOString().slice(0,10);
   $("detalhe-fundo").hidden = false;
+  dtCarregarComposicao();
 }
 
 async function dtRegistrarPagamento(){
@@ -1602,6 +1652,160 @@ async function dtRegistrarPagamento(){
   }
   abrirDetalhe(dtCirurgia.id);
   carregarTudo();
+}
+
+/* ---------- composição do honorário (motor contratual) ---------- */
+let dtItens = [];
+let dtProcTimer = null;
+
+async function dtCarregarComposicao(){
+  const { data } = await sb.from("cirurgia_itens").select("*").eq("cirurgia_id", dtCirurgia.id).order("valor_base", { ascending: false });
+  dtItens = data || [];
+  const alvo = $("dt-itens");
+  if (!dtItens.length) {
+    alvo.innerHTML = '<p style="font-size:.78rem;color:var(--cinza);padding:6px 0">Sem composição — o valor previsto é o registrado no lançamento. Inclua os procedimentos do ato para aplicar as regras do contrato (100% / 70% / 50%, urgência, participação).</p>';
+  } else {
+    alvo.innerHTML = "";
+    dtItens.forEach((it, idx) => {
+      const div = document.createElement("div");
+      div.className = "dt-item";
+      div.innerHTML = '<span class="nm"></span><span class="pct"></span><button class="via"></button><button class="rm" title="Remover">✕</button>';
+      div.querySelector(".nm").textContent = (idx + 1) + "º · " + it.nome;
+      div.querySelector(".pct").textContent = brl.format(Number(it.valor_base || 0)) +
+        (it.valor_calculado != null ? " → " + brl.format(Number(it.valor_calculado)) : "");
+      const via = div.querySelector(".via");
+      via.textContent = it.mesma_via ? "mesma via" : "outra via";
+      via.addEventListener("click", async () => {
+        await sb.from("cirurgia_itens").update({ mesma_via: !it.mesma_via }).eq("id", it.id);
+        dtCarregarComposicao();
+      });
+      div.querySelector(".rm").addEventListener("click", async () => {
+        await sb.from("cirurgia_itens").delete().eq("id", it.id);
+        dtCarregarComposicao();
+      });
+      alvo.appendChild(div);
+    });
+  }
+  $("dt-urgencia").checked = !!dtCirurgia.urgencia;
+  $("dt-papel").value = dtCirurgia.papel_medico || "cirurgiao";
+  $("dt-memoria").innerHTML = "";
+}
+
+async function dtSugerirProc(){
+  const termo = $("dt-add-proc").value.trim();
+  if (termo.length < 3) return;
+  const { data } = await sb.from("vw_meus_valores")
+    .select("procedimento_id,codigo,nome_procedimento,valor_efetivo")
+    .ilike("nome_procedimento", "%" + termo.replace(/[%,]/g, "") + "%")
+    .order("nome_procedimento").limit(12);
+  const lista = $("dt-proc-lista");
+  lista.innerHTML = "";
+  (data || []).forEach(p => {
+    const op = document.createElement("option");
+    op.value = p.nome_procedimento;
+    op.label = p.codigo + " · " + brl.format(Number(p.valor_efetivo || 0));
+    lista.appendChild(op);
+  });
+}
+
+async function dtIncluirItem(){
+  const nome = $("dt-add-proc").value.trim();
+  if (!nome) { toast("Digite o procedimento.", true); return; }
+  const { data: p } = await sb.from("vw_meus_valores")
+    .select("procedimento_id,nome_procedimento,valor_efetivo")
+    .eq("nome_procedimento", nome).limit(1).maybeSingle();
+  // se a composição está vazia, inclui primeiro o procedimento principal já registrado
+  if (!dtItens.length && dtCirurgia.nome_procedimento && dtCirurgia.nome_procedimento !== nome) {
+    await sb.from("cirurgia_itens").insert({
+      cirurgia_id: dtCirurgia.id, nome: dtCirurgia.nome_procedimento,
+      valor_base: Number(dtCirurgia.valor_previsto || 0), mesma_via: true
+    });
+  }
+  const { error } = await sb.from("cirurgia_itens").insert({
+    cirurgia_id: dtCirurgia.id,
+    procedimento_id: p ? p.procedimento_id : null,
+    nome: nome,
+    valor_base: p ? Number(p.valor_efetivo || 0) : 0,
+    mesma_via: true
+  });
+  if (error) { toast("Não foi possível incluir: " + error.message, true); return; }
+  $("dt-add-proc").value = "";
+  dtCarregarComposicao();
+}
+
+async function dtRecalcular(){
+  await sb.from("cirurgias").update({
+    urgencia: $("dt-urgencia").checked,
+    papel_medico: $("dt-papel").value
+  }).eq("id", dtCirurgia.id);
+  const { data, error } = await sb.rpc("recalcular_cirurgia", { p_cirurgia: dtCirurgia.id });
+  if (error) { toast("Não foi possível recalcular: " + error.message, true); return; }
+  if (data && data.erro === "sem_itens") { toast("Inclua ao menos um procedimento na composição.", true); return; }
+  const m = data;
+  let txt = "Subtotal " + brl.format(Number(m.subtotal || 0));
+  if (Number(m.ajuste_pct)) txt += " · ajuste do contrato " + (m.ajuste_pct > 0 ? "+" : "") + m.ajuste_pct + "%";
+  if (m.urgencia) txt += " · urgência +" + m.pct_urgencia + "%";
+  if (m.papel !== "cirurgiao") txt += " · " + m.papel + " " + m.pct_papel + "%";
+  txt += " · *Total: " + brl.format(Number(m.total || 0)) + "*";
+  $("dt-memoria").textContent = txt.replace(/\*/g, "");
+  toast("Valor recalculado: " + brl.format(Number(m.total || 0)));
+  const { data: c } = await sb.from("vw_cirurgias_completa").select("*").eq("id", dtCirurgia.id).maybeSingle();
+  if (c) dtCirurgia = c;
+  dtCarregarComposicao();
+  carregarTudo();
+}
+
+/* ---------- meus contratos (regras por convênio) ---------- */
+async function carregarContratos(){
+  const alvo = $("contratos");
+  try {
+    const medicoId = await mvMedicoId();
+    const [convs, regras] = await Promise.all([
+      sb.from("convenios").select("id,nome,tipo").eq("ativo", true).neq("tipo", "sus").order("nome"),
+      sb.from("medico_convenio_regras").select("*")
+    ]);
+    if (convs.error) throw convs.error;
+    const porConv = {};
+    (regras.data || []).forEach(r => { porConv[r.convenio_id] = r; });
+    const alvoEl = alvo;
+    alvoEl.innerHTML = "";
+    (convs.data || []).forEach(cv => {
+      const r = porConv[cv.id] || { ajuste_pct: 0, pct_proc2: 70, pct_proc3: 50, pct_via_diferente: 100, pct_urgencia: 30, pct_aux1: 30, pct_aux2: 20, pct_instrumentador: 10 };
+      const div = document.createElement("div");
+      div.className = "contrato";
+      div.innerHTML = '<div class="contrato-nome"></div>' +
+        '<div class="contrato-campos">' +
+        campoNum("Ajuste % (deflator −/ ágio +)", "ajuste_pct", r.ajuste_pct) +
+        campoNum("2º proc %", "pct_proc2", r.pct_proc2) +
+        campoNum("3º+ proc %", "pct_proc3", r.pct_proc3) +
+        campoNum("Outra via %", "pct_via_diferente", r.pct_via_diferente) +
+        campoNum("Urgência +%", "pct_urgencia", r.pct_urgencia) +
+        campoNum("1º aux %", "pct_aux1", r.pct_aux1) +
+        campoNum("2º aux %", "pct_aux2", r.pct_aux2) +
+        campoNum("Instrum. %", "pct_instrumentador", r.pct_instrumentador) +
+        '</div><button class="btn btn-confirmar ct-salvar" style="padding:7px 14px;font-size:.8rem;margin-top:8px">Salvar contrato</button>';
+      div.querySelector(".contrato-nome").textContent = cv.nome;
+      div.querySelector(".ct-salvar").addEventListener("click", async () => {
+        const pega = campo => Number(div.querySelector('[data-campo="' + campo + '"]').value || 0);
+        const { error } = await sb.from("medico_convenio_regras").upsert({
+          medico_id: medicoId, convenio_id: cv.id,
+          ajuste_pct: pega("ajuste_pct"), pct_proc2: pega("pct_proc2"), pct_proc3: pega("pct_proc3"),
+          pct_via_diferente: pega("pct_via_diferente"), pct_urgencia: pega("pct_urgencia"),
+          pct_aux1: pega("pct_aux1"), pct_aux2: pega("pct_aux2"), pct_instrumentador: pega("pct_instrumentador"),
+          updated_at: new Date().toISOString()
+        });
+        if (error) { toast("Não foi possível salvar: " + error.message, true); return; }
+        toast("Contrato " + cv.nome + " salvo.");
+      });
+      alvoEl.appendChild(div);
+    });
+    if (!(convs.data || []).length) alvoEl.innerHTML = '<div class="vazio">Sem convênios cadastrados.</div>';
+  } catch (e) {
+    alvo.innerHTML = '<div class="vazio">Contratos indisponíveis: ' + (e.message || e) + '</div>';
+  }
+}
+function campoNum(rotulo, campo, valor){
+  return '<label class="ct-campo"><span>' + rotulo + '</span><input type="number" step="0.1" data-campo="' + campo + '" value="' + Number(valor) + '"></label>';
 }
 
 /* ---------- ações ---------- */
