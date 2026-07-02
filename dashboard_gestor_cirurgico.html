@@ -469,6 +469,33 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
           <div class="painel-cab"><h2>Pipeline do mês</h2></div>
           <div class="painel-corpo" id="pipeline"></div>
         </section>
+        <section class="painel" aria-label="Lançamento manual de cirurgia">
+          <div class="painel-cab">
+            <h2>Lançar cirurgia</h2>
+            <button class="recarregar" id="lc-abrir">+ Lançar</button>
+          </div>
+          <div class="painel-corpo" id="lc-form" hidden>
+            <p style="font-size:.76rem;color:var(--cinza);margin:0 0 12px">O mesmo registro do WhatsApp, feito à mão — útil quando quem lança não usa o WhatsApp.</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+              <label class="campo" style="margin:0"><span>Data e hora *</span><input type="datetime-local" id="lc-data"></label>
+              <label class="campo" style="margin:0"><span>Procedimento *</span><input id="lc-proc" placeholder="digite 3+ letras" list="lc-proc-lista" autocomplete="off"><datalist id="lc-proc-lista"></datalist></label>
+              <label class="campo" style="margin:0"><span>Paciente</span><input id="lc-pac" placeholder="nome do paciente"></label>
+              <label class="campo" style="margin:0"><span>Hospital</span><input id="lc-hosp" placeholder="local"></label>
+              <label class="campo" style="margin:0"><span>Convênio</span><input id="lc-conv" placeholder="ex.: Unimed, Particular"></label>
+              <label class="campo" style="margin:0"><span>Valor previsto (R$)</span><input type="number" id="lc-valor" step="0.01" min="0" placeholder="preenchido ao escolher"></label>
+              <label class="campo" style="margin:0"><span>Situação</span>
+                <select id="lc-status">
+                  <option value="realizada" selected>Já realizada</option>
+                  <option value="confirmada">Agendada (confirmada)</option>
+                </select>
+              </label>
+            </div>
+            <div class="acoes" style="margin-top:14px">
+              <button class="btn btn-confirmar" id="lc-salvar">Lançar cirurgia</button>
+              <button class="btn btn-recusar" id="lc-fechar">Fechar</button>
+            </div>
+          </div>
+        </section>
         <section class="painel" aria-label="Movimentações recentes">
           <div class="painel-cab"><h2>Recentes</h2></div>
           <div class="painel-corpo" id="recentes"></div>
@@ -877,6 +904,14 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("ag-novo-btn").addEventListener("click", () => { $("ag-form").hidden = !$("ag-form").hidden; });
   $("ag-cancelar").addEventListener("click", () => { $("ag-form").hidden = true; });
   $("ag-salvar").addEventListener("click", agCriar);
+  $("lc-abrir").addEventListener("click", () => { $("lc-form").hidden = !$("lc-form").hidden; });
+  $("lc-fechar").addEventListener("click", () => { $("lc-form").hidden = true; });
+  $("lc-salvar").addEventListener("click", lcCriar);
+  $("lc-proc").addEventListener("input", () => {
+    clearTimeout(lcProcTimer);
+    lcProcTimer = setTimeout(lcSugerirProcedimentos, 350);
+  });
+  $("lc-proc").addEventListener("change", lcPreencherValor);
   $("dt-fechar").addEventListener("click", () => { $("detalhe-fundo").hidden = true; });
   $("detalhe-fundo").addEventListener("click", (e) => { if (e.target.id === "detalhe-fundo") $("detalhe-fundo").hidden = true; });
   $("dt-pg-salvar").addEventListener("click", dtRegistrarPagamento);
@@ -1454,6 +1489,67 @@ async function agCriar(){
   toast("Agendamento criado — vai para o Google Agenda em até 5 min.");
   ["ag-data","ag-proc","ag-pac","ag-hosp"].forEach(id => $(id).value = "");
   $("ag-form").hidden = true;
+  carregarTudo();
+}
+
+/* ---------- lançamento manual de cirurgia (mesmo registro do WhatsApp) ---------- */
+let lcProcTimer = null;
+async function lcSugerirProcedimentos(){
+  const termo = $("lc-proc").value.trim();
+  if (termo.length < 3) return;
+  const itens = await buscarProcedimentosTodos(termo);
+  const lista = $("lc-proc-lista");
+  lista.innerHTML = "";
+  itens.forEach(p => {
+    const op = document.createElement("option");
+    op.value = p.nome;
+    op.label = p.rotulo;
+    lista.appendChild(op);
+  });
+}
+async function lcPreencherValor(){
+  const nome = $("lc-proc").value.trim();
+  if (!nome || $("lc-valor").value) return;
+  let { data: p } = await sb.from("vw_meus_valores")
+    .select("valor_efetivo").eq("nome_procedimento", nome).limit(1).maybeSingle();
+  if (!p) {
+    const { data: pr } = await sb.from("procedimentos_proprios")
+      .select("valor").eq("ativo", true).eq("nome", nome).limit(1).maybeSingle();
+    if (pr) p = { valor_efetivo: pr.valor };
+  }
+  if (p && Number(p.valor_efetivo) > 0) $("lc-valor").value = Number(p.valor_efetivo).toFixed(2);
+}
+async function lcCriar(){
+  const dataTxt = $("lc-data").value;
+  const proc = $("lc-proc").value.trim();
+  const situacao = $("lc-status").value;
+  if (!dataTxt || !proc) { toast("Preencha data/hora e procedimento.", true); return; }
+  const quando = new Date(dataTxt);
+  if (isNaN(quando)) { toast("Data inválida.", true); return; }
+  if (situacao === "confirmada" && quando < new Date()) { toast("Cirurgia agendada precisa de data futura. Se já aconteceu, use \"Já realizada\".", true); return; }
+  const medicoId = await mvMedicoId();
+  if (!medicoId) { toast("Não foi possível identificar o cadastro do médico.", true); return; }
+  const btn = $("lc-salvar");
+  btn.disabled = true; btn.textContent = "Lançando…";
+  const registro = {
+    medico_id: medicoId,
+    nome_procedimento: proc,
+    paciente_nome: $("lc-pac").value.trim() || null,
+    hospital_nome: $("lc-hosp").value.trim() || null,
+    convenio_nome: $("lc-conv").value.trim() || null,
+    data_cirurgia: quando.toISOString(),
+    valor_previsto: Number($("lc-valor").value) > 0 ? Number($("lc-valor").value) : null,
+    status: situacao,
+    protocolo: "MN-" + Date.now().toString(36).toUpperCase(),
+    observacoes: "Lançado manualmente pelo dashboard"
+  };
+  if (situacao === "realizada") registro.data_realizacao = dataTxt.slice(0, 10);
+  const { error } = await sb.from("cirurgias").insert(registro);
+  btn.disabled = false; btn.textContent = "Lançar cirurgia";
+  if (error) { toast("Não foi possível lançar: " + error.message, true); return; }
+  toast(situacao === "realizada" ? "Cirurgia lançada." : "Cirurgia agendada — vai para o Google Agenda em até 5 min.");
+  ["lc-data","lc-proc","lc-pac","lc-hosp","lc-conv","lc-valor"].forEach(id => $(id).value = "");
+  $("lc-form").hidden = true;
   carregarTudo();
 }
 
