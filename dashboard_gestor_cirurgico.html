@@ -1184,6 +1184,20 @@ function renderFila(linhas){
       '<div class="acoes">' +
         '<button class="btn btn-confirmar">Confirmar cirurgia</button>' +
         '<button class="btn btn-recusar">Recusar</button>' +
+        '<button class="btn f-editar" style="background:var(--painel-2,rgba(127,127,127,.15));color:var(--titulo);padding:8px 14px;font-size:.88rem">Editar</button>' +
+      '</div>' +
+      '<div class="f-edit" hidden style="margin-top:12px;border-top:1px solid var(--linha);padding-top:12px">' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">' +
+          '<label class="campo" style="margin:0"><span>Procedimento</span><input class="fe-proc"></label>' +
+          '<label class="campo" style="margin:0"><span>Paciente</span><input class="fe-pac"></label>' +
+          '<label class="campo" style="margin:0"><span>Hospital</span><input class="fe-hosp"></label>' +
+          '<label class="campo" style="margin:0"><span>Convênio</span><input class="fe-conv"></label>' +
+          '<label class="campo" style="margin:0"><span>Valor (R$)</span><input class="fe-valor" type="number" step="0.01" min="0"></label>' +
+          '<label class="campo" style="margin:0"><span>Data e hora</span><input class="fe-data" type="datetime-local"></label>' +
+        '</div>' +
+        '<div class="acoes" style="margin-top:12px">' +
+          '<button class="btn btn-confirmar fe-salvar" style="padding:7px 14px;font-size:.84rem">Salvar correções</button>' +
+        '</div>' +
       '</div>';
     card.querySelector("h3").textContent = c.nome_procedimento || "Procedimento não informado";
     card.querySelector(".protocolo").textContent = "Nº " + (c.protocolo || "—");
@@ -1196,6 +1210,42 @@ function renderFila(linhas){
       if (window.confirm("Recusar a solicitação " + (c.protocolo || "") + "? O registro vai para o status cancelada.")) {
         mudarStatus(c, "cancelada", "Solicitação cancelada");
       }
+    });
+    card.querySelector(".f-editar").addEventListener("click", () => {
+      const area = card.querySelector(".f-edit");
+      if (area.hidden) {
+        card.querySelector(".fe-proc").value = c.nome_procedimento || "";
+        card.querySelector(".fe-pac").value = c.paciente_nome || "";
+        card.querySelector(".fe-hosp").value = c.hospital_nome || "";
+        card.querySelector(".fe-conv").value = c.convenio_nome || "";
+        card.querySelector(".fe-valor").value = c.valor_previsto != null ? Number(c.valor_previsto) : "";
+        if (c.data_cirurgia) {
+          const d = new Date(c.data_cirurgia);
+          d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+          card.querySelector(".fe-data").value = d.toISOString().slice(0, 16);
+        }
+      }
+      area.hidden = !area.hidden;
+    });
+    card.querySelector(".fe-salvar").addEventListener("click", async () => {
+      const btn = card.querySelector(".fe-salvar");
+      const proc = card.querySelector(".fe-proc").value.trim();
+      if (!proc) { toast("O procedimento não pode ficar vazio.", true); return; }
+      const dataTxt = card.querySelector(".fe-data").value;
+      const valorTxt = card.querySelector(".fe-valor").value;
+      btn.disabled = true; btn.textContent = "Salvando…";
+      const { error } = await sb.from("cirurgias").update({
+        nome_procedimento: proc,
+        paciente_nome: card.querySelector(".fe-pac").value.trim() || null,
+        hospital_nome: card.querySelector(".fe-hosp").value.trim() || null,
+        convenio_nome: card.querySelector(".fe-conv").value.trim() || null,
+        valor_previsto: valorTxt !== "" ? Number(valorTxt) : null,
+        data_cirurgia: dataTxt ? new Date(dataTxt).toISOString() : c.data_cirurgia
+      }).eq("id", c.id);
+      btn.disabled = false; btn.textContent = "Salvar correções";
+      if (error) { toast("Não foi possível salvar: " + error.message, true); return; }
+      toast("Correções salvas — confira e confirme.");
+      carregarTudo();
     });
     alvo.appendChild(card);
   });
