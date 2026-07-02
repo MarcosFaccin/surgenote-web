@@ -38,6 +38,16 @@ html[data-tema="escuro"]{
   --ambar:#D9A03F; --vermelho:#E4604E; --petroleo:#5FA2BD;
 }
 html[data-tema="escuro"] .campo input, html[data-tema="escuro"] .sel-status{color-scheme:dark}
+@supports not (color: color-mix(in srgb, red, blue)) {
+  :root{
+    --verde-escuro:#123647; --verde-tinta:#DCE8ED; --titulo:#123647;
+  }
+  html[data-tema="escuro"]{
+    --papel:#0C1418; --branco:#11202A; --grafite:#E9EEF1; --cinza:#93A6B0;
+    --linha:#1E313C; --verde-tinta:#16303C; --titulo:#BFD5E0;
+  }
+}
+
 *{box-sizing:border-box;margin:0;padding:0}
 html{font-size:16px}
 body{font-family:var(--corpo);background:var(--papel);color:var(--grafite);line-height:1.55;min-height:100vh}
@@ -84,7 +94,7 @@ header.topo{background:var(--verde-escuro);color:#fff;padding:14px 28px;display:
 main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 
 /* ---------- herói "últimos 30 dias" (DNA do SurgeNote 1.0) ---------- */
-.hero30{margin-bottom:16px;background:var(--verde-escuro);border:none;overflow:hidden}
+.painel.hero30{margin-bottom:16px;background:var(--verde-escuro);border:none;overflow:hidden}
 .hero30-topo{display:flex;align-items:baseline;gap:10px;padding:16px 20px 6px}
 .hero30-topo h2{font-family:var(--display);font-size:1rem;font-weight:700;color:#fff}
 .hero30-topo .conta{color:rgba(255,255,255,.55)}
@@ -181,6 +191,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .painel-cab .conta{font-family:var(--mono);font-size:.8rem;color:var(--cinza)}
 .painel-cab .recarregar{margin-left:auto;background:none;border:none;color:var(--verde);font-size:.82rem;font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .painel-corpo{padding:10px 16px 14px}
+.painel-corpo:has(> table),.painel-corpo > div:has(> table){overflow-x:auto}
 
 /* fila — assinatura visual */
 .cartao{position:relative;border:1px solid var(--linha);border-left:4px solid var(--ambar);border-radius:8px;padding:16px 16px 14px;margin-top:12px;background:var(--branco);transition:background .4s}
@@ -216,9 +227,47 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 #toasts{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:50}
 .toast{background:var(--verde-escuro);color:#fff;border-radius:8px;padding:11px 16px;font-size:.88rem;box-shadow:0 6px 18px rgba(8,58,51,.25)}
 .toast.ruim{background:var(--vermelho)}
+
 @media (max-width: 640px){
-  header.topo{padding:12px 16px}
-  main{padding:18px 16px 50px}
+  /* cabeçalho compacto: só logo + nome + botões-ícone */
+  header.topo{padding:10px 12px;gap:10px;flex-wrap:nowrap}
+  .marca{font-size:.98rem;min-width:0;flex:1}
+  .marca #titulo-app{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .marca small{font-size:.62rem}
+  .aovivo{display:none}
+  .usuario{display:none}
+  .logo-medico{height:28px;max-width:90px}
+  .btn-sair{padding:6px 10px;font-size:.76rem}
+  /* KPIs em 2 colunas firmes */
+  .kpis{grid-template-columns:1fr 1fr;gap:8px}
+  .kpi{padding:11px 12px}
+  .kpi .valor{font-size:1.25rem}
+  .kpi .sub{font-size:.7rem}
+  /* herói 30 dias */
+  .grafico30 svg{height:96px}
+  .pa-valor{font-size:1.1rem}
+  /* painéis e linhas confortáveis para o dedo */
+  .painel-cab{padding:10px 12px}
+  .painel-corpo{padding:8px 12px 12px}
+  .recente{flex-wrap:wrap;gap:8px}
+  .recente .info{flex:1 1 100%}
+  table{font-size:.82rem;min-width:420px}
+  thead th.hide-sm,tbody td.hide-sm{display:none}
+  thead th,tbody td{padding:9px 10px}
+  /* inputs com 16px evitam o zoom automático do iPhone */
+  .campo input,.sel-status,.ap-nome{font-size:16px}
+  .campo input{padding:10px 11px}
+  /* formulários em coluna única */
+  #ag-form > div, .painel-corpo > div[style*="auto-fit"]{grid-template-columns:1fr!important}
+  .acoes{flex-wrap:wrap}
+  .acoes .btn{flex:1;justify-content:center}
+  /* painel de aparência ocupa a largura */
+  .ap-painel{left:12px;right:12px;width:auto;top:56px}
+  /* herói e grade sem colunas */
+  .grade{grid-template-columns:1fr;gap:12px}
+}
+@media (max-width: 640px){
+  main{padding:12px 12px 96px}
   .cartao h3{padding-right:0}
   .protocolo{position:static;display:inline-block;margin-top:8px;transform:rotate(-2deg)}
 }
@@ -976,7 +1025,7 @@ async function gerarRelatorioPDF(){
     "body{font-family:Arial,Helvetica,sans-serif;color:#1C2421;margin:36px;font-size:13px}" +
     "h1{font-size:19px;margin:0 0 2px}" +
     ".sub{color:#5C6662;font-size:12px;margin-bottom:4px}" +
-    "table{width:100%;border-collapse:collapse;margin-top:16px}" +
+    "table{width:100%;min-width:480px;border-collapse:collapse;margin-top:16px}" +
     "th{background:#DDEEE9;color:#083A33;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border:1px solid #b9d2cb}" +
     "td{padding:7px 8px;border:1px solid #DCE3DF;vertical-align:top}" +
     "td small{color:#5C6662}" +
