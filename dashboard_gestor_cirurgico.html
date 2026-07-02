@@ -468,17 +468,12 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
               <label class="campo" style="margin:0"><span>Hospital</span><input id="lc-hosp" placeholder="local"></label>
               <label class="campo" style="margin:0"><span>Convênio</span><input id="lc-conv" placeholder="ex.: Unimed, Particular"></label>
               <label class="campo" style="margin:0"><span>Valor previsto (R$)</span><input type="number" id="lc-valor" step="0.01" min="0" placeholder="preenchido ao escolher"></label>
-              <label class="campo" style="margin:0"><span>Situação</span>
-                <select id="lc-status">
-                  <option value="realizada" selected>Já realizada</option>
-                  <option value="confirmada">Agendada (confirmada)</option>
-                </select>
-              </label>
             </div>
             <div class="acoes" style="margin-top:14px">
               <button class="btn btn-confirmar" id="lc-salvar">Lançar cirurgia</button>
               <button class="btn btn-recusar" id="lc-fechar">Fechar</button>
             </div>
+            <p style="font-size:.76rem;color:var(--cinza);margin:10px 0 0">O lançamento entra na <b>Fila de confirmação</b> — nada vira produção sem o OK do médico.</p>
           </div>
         </section>
         <section class="painel" aria-label="Fila de solicitações" style="flex:1">
@@ -1522,16 +1517,14 @@ async function lcPreencherValor(){
 async function lcCriar(){
   const dataTxt = $("lc-data").value;
   const proc = $("lc-proc").value.trim();
-  const situacao = $("lc-status").value;
   if (!dataTxt || !proc) { toast("Preencha data/hora e procedimento.", true); return; }
   const quando = new Date(dataTxt);
   if (isNaN(quando)) { toast("Data inválida.", true); return; }
-  if (situacao === "confirmada" && quando < new Date()) { toast("Cirurgia agendada precisa de data futura. Se já aconteceu, use \"Já realizada\".", true); return; }
   const medicoId = await mvMedicoId();
   if (!medicoId) { toast("Não foi possível identificar o cadastro do médico.", true); return; }
   const btn = $("lc-salvar");
   btn.disabled = true; btn.textContent = "Lançando…";
-  const registro = {
+  const { error } = await sb.from("cirurgias").insert({
     medico_id: medicoId,
     nome_procedimento: proc,
     paciente_nome: $("lc-pac").value.trim() || null,
@@ -1539,15 +1532,13 @@ async function lcCriar(){
     convenio_nome: $("lc-conv").value.trim() || null,
     data_cirurgia: quando.toISOString(),
     valor_previsto: Number($("lc-valor").value) > 0 ? Number($("lc-valor").value) : null,
-    status: situacao,
+    status: "aguardando_confirmacao",
     protocolo: "MN-" + Date.now().toString(36).toUpperCase(),
     observacoes: "Lançado manualmente pelo dashboard"
-  };
-  if (situacao === "realizada") registro.data_realizacao = dataTxt.slice(0, 10);
-  const { error } = await sb.from("cirurgias").insert(registro);
+  });
   btn.disabled = false; btn.textContent = "Lançar cirurgia";
   if (error) { toast("Não foi possível lançar: " + error.message, true); return; }
-  toast(situacao === "realizada" ? "Cirurgia lançada." : "Cirurgia agendada — vai para o Google Agenda em até 5 min.");
+  toast("Lançamento enviado para a Fila de confirmação.");
   ["lc-data","lc-proc","lc-pac","lc-hosp","lc-conv","lc-valor"].forEach(id => $(id).value = "");
   $("lc-form").hidden = true;
   carregarTudo();
