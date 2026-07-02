@@ -537,6 +537,19 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
           <h2 style="font-size:.95rem">Valores personalizados</h2>
         </div>
         <div id="mv-lista"></div>
+
+        <div class="painel-cab" style="padding:14px 0 10px;border-bottom:none;border-top:1px solid var(--linha);margin-top:16px">
+          <h2 style="font-size:.95rem">Procedimentos próprios</h2>
+          <span class="conta" id="pp-conta"></span>
+        </div>
+        <p style="font-size:.8rem;color:var(--cinza);margin-bottom:10px">Procedimentos fora da CBHPM (Botox, preenchimento, pacotes particulares). Entram nas buscas do agendamento e da composição do honorário.</p>
+        <div id="pp-lista"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:10px;max-width:720px">
+          <label class="campo" style="margin:0"><span>Nome *</span><input id="pp-nome" placeholder="ex.: Botox facial"></label>
+          <label class="campo" style="margin:0"><span>Tabela/categoria</span><input id="pp-cat" placeholder="Particular" value="Particular"></label>
+          <label class="campo" style="margin:0"><span>Valor (R$) *</span><input id="pp-valor" type="number" min="0" step="0.01" placeholder="1200.00"></label>
+        </div>
+        <button class="btn btn-confirmar" id="pp-btn" style="margin-top:10px;padding:8px 16px;font-size:.85rem">+ Criar procedimento</button>
       </div>
     </section>
 
@@ -803,6 +816,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("dt-recalcular").addEventListener("click", dtRecalcular);
   $("dt-add-proc").addEventListener("input", () => { clearTimeout(dtProcTimer); dtProcTimer = setTimeout(dtSugerirProc, 300); });
   $("eq-btn").addEventListener("click", criarMembroEquipe);
+  $("pp-btn").addEventListener("click", ppCriar);
   $("ag-proc").addEventListener("input", () => {
     clearTimeout(agProcTimer);
     agProcTimer = setTimeout(agSugerirProcedimentos, 300);
@@ -889,6 +903,7 @@ async function carregarTudo(){
   mvListar();
   carregarContratos();
   carregarEquipe();
+  ppListar();
 }
 
 async function carregarConciliacao(){
@@ -1273,19 +1288,13 @@ let agProcTimer = null;
 async function agSugerirProcedimentos(){
   const termo = $("ag-proc").value.trim();
   if (termo.length < 3) return;
-  const { data, error } = await sb.from("procedimentos")
-    .select("nome, codigo, tabela")
-    .eq("ativo", true)
-    .ilike("nome", "%" + termo.replace(/[%,]/g, "") + "%")
-    .order("nome")
-    .limit(15);
-  if (error || !data) return;
+  const itens = await buscarProcedimentosTodos(termo);
   const lista = $("ag-proc-lista");
   lista.innerHTML = "";
-  data.forEach(p => {
+  itens.forEach(p => {
     const op = document.createElement("option");
     op.value = p.nome;
-    op.label = p.codigo + " · " + (p.tabela === "sus" ? "SUS" : "CBHPM");
+    op.label = p.rotulo;
     lista.appendChild(op);
   });
 }
@@ -1716,13 +1725,21 @@ async function dtCarregarComposicao(){
 async function dtSugerirProc(){
   const termo = $("dt-add-proc").value.trim();
   if (termo.length < 3) return;
-  const { data } = await sb.from("vw_meus_valores")
-    .select("procedimento_id,codigo,nome_procedimento,valor_efetivo")
-    .ilike("nome_procedimento", "%" + termo.replace(/[%,]/g, "") + "%")
-    .order("nome_procedimento").limit(12);
+  const [meus, proprios] = await Promise.all([
+    sb.from("vw_meus_valores").select("codigo,nome_procedimento,valor_efetivo")
+      .ilike("nome_procedimento", "%" + termo.replace(/[%,]/g, "") + "%").order("nome_procedimento").limit(10),
+    sb.from("procedimentos_proprios").select("nome,categoria,valor").eq("ativo", true)
+      .ilike("nome", "%" + termo.replace(/[%,]/g, "") + "%").order("nome").limit(8)
+  ]);
   const lista = $("dt-proc-lista");
   lista.innerHTML = "";
-  (data || []).forEach(p => {
+  (proprios.data || []).forEach(p => {
+    const op = document.createElement("option");
+    op.value = p.nome;
+    op.label = p.categoria + " · " + brl.format(Number(p.valor));
+    lista.appendChild(op);
+  });
+  (meus.data || []).forEach(p => {
     const op = document.createElement("option");
     op.value = p.nome_procedimento;
     op.label = p.codigo + " · " + brl.format(Number(p.valor_efetivo || 0));
@@ -1733,9 +1750,14 @@ async function dtSugerirProc(){
 async function dtIncluirItem(){
   const nome = $("dt-add-proc").value.trim();
   if (!nome) { toast("Digite o procedimento.", true); return; }
-  const { data: p } = await sb.from("vw_meus_valores")
+  let { data: p } = await sb.from("vw_meus_valores")
     .select("procedimento_id,nome_procedimento,valor_efetivo")
     .eq("nome_procedimento", nome).limit(1).maybeSingle();
+  if (!p) {
+    const { data: pr } = await sb.from("procedimentos_proprios")
+      .select("nome,valor").eq("ativo", true).eq("nome", nome).limit(1).maybeSingle();
+    if (pr) p = { procedimento_id: null, nome_procedimento: pr.nome, valor_efetivo: pr.valor };
+  }
   // se a composição está vazia, inclui primeiro o procedimento principal já registrado
   if (!dtItens.length && dtCirurgia.nome_procedimento && dtCirurgia.nome_procedimento !== nome) {
     await sb.from("cirurgia_itens").insert({
@@ -1925,6 +1947,69 @@ async function aplicarPapel(){
   if (ativa && ((ativa.dataset.view === "valores" && !p.titular) || (ativa.dataset.view === "financeiro" && !fin))) {
     trocarView("inicio");
   }
+}
+
+/* ---------- procedimentos próprios ---------- */
+async function ppListar(){
+  const alvo = $("pp-lista");
+  const { data, error } = await sb.from("procedimentos_proprios").select("*").eq("ativo", true).order("categoria").order("nome");
+  if (error) { alvo.innerHTML = ""; return; }
+  $("pp-conta").textContent = (data || []).length ? (data.length + " próprio(s)") : "";
+  if (!(data || []).length) { alvo.innerHTML = '<div class="vazio">Nenhum procedimento próprio ainda.</div>'; return; }
+  alvo.innerHTML = "";
+  data.forEach(p => {
+    const div = document.createElement("div");
+    div.className = "recente";
+    div.innerHTML = '<div class="info"><div class="nome"></div><div class="sub"></div></div>' +
+      '<input class="sel-status pp-val" type="number" min="0" step="0.01" style="width:110px;text-align:right">' +
+      '<button class="btn btn-confirmar pp-sv" style="padding:6px 12px;font-size:.8rem">Salvar</button>' +
+      '<button class="btn btn-recusar pp-rm" style="padding:6px 12px;font-size:.8rem">Remover</button>';
+    div.querySelector(".nome").textContent = p.nome;
+    div.querySelector(".sub").textContent = p.categoria;
+    const inp = div.querySelector(".pp-val");
+    inp.value = Number(p.valor);
+    div.querySelector(".pp-sv").addEventListener("click", async () => {
+      const v = Number(inp.value);
+      if (isNaN(v) || v < 0) { toast("Valor inválido.", true); return; }
+      await sb.from("procedimentos_proprios").update({ valor: v }).eq("id", p.id);
+      toast("Valor de " + p.nome + " salvo.");
+    });
+    div.querySelector(".pp-rm").addEventListener("click", async () => {
+      if (!window.confirm("Remover " + p.nome + " da sua tabela?")) return;
+      await sb.from("procedimentos_proprios").update({ ativo: false }).eq("id", p.id);
+      toast(p.nome + " removido.");
+      ppListar();
+    });
+    alvo.appendChild(div);
+  });
+}
+
+async function ppCriar(){
+  const nome = $("pp-nome").value.trim();
+  const categoria = $("pp-cat").value.trim() || "Particular";
+  const valor = Number($("pp-valor").value);
+  if (!nome || isNaN(valor) || valor < 0) { toast("Informe nome e valor.", true); return; }
+  const medicoId = await mvMedicoId();
+  const { error } = await sb.from("procedimentos_proprios").upsert(
+    { medico_id: medicoId, nome, categoria, valor, ativo: true },
+    { onConflict: "medico_id,nome" });
+  if (error) { toast("Não foi possível criar: " + error.message, true); return; }
+  toast(nome + " criado (" + categoria + ").");
+  $("pp-nome").value = ""; $("pp-valor").value = "";
+  ppListar();
+}
+
+/* busca unificada: catálogo oficial + próprios (para agendamento e composição) */
+async function buscarProcedimentosTodos(termo){
+  const t = termo.replace(/[%,]/g, "");
+  const [cat, prop] = await Promise.all([
+    sb.from("procedimentos").select("nome, codigo, tabela").eq("ativo", true).ilike("nome", "%" + t + "%").order("nome").limit(12),
+    sb.from("procedimentos_proprios").select("nome, categoria, valor").eq("ativo", true).ilike("nome", "%" + t + "%").order("nome").limit(8)
+  ]);
+  const lista = [];
+  (prop.data || []).forEach(p => lista.push({ nome: p.nome, rotulo: p.categoria + " · " + brl.format(Number(p.valor)), valor: Number(p.valor), proprio: true }));
+  (cat.data || []).forEach(p => lista.push({ nome: p.nome, rotulo: p.codigo + " · " + (p.tabela === "sus" ? "SUS" : "CBHPM"), proprio: false }));
+  return lista;
 }
 
 /* ---------- ações ---------- */
