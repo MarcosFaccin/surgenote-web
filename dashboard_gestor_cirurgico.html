@@ -503,6 +503,17 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
           </div>
           <div class="painel-corpo" id="agenda"></div>
         </section>
+
+        <section class="painel" aria-label="Conexão com o Google Agenda" style="margin-top:16px" id="ga-painel">
+          <div class="painel-cab"><h2>Google Agenda</h2><span class="conta" id="ga-estado"></span></div>
+          <div class="painel-corpo">
+            <p id="ga-texto" style="font-size:.84rem;color:var(--cinza);margin:0 0 12px">Verificando conexão…</p>
+            <div class="acoes">
+              <button class="btn btn-confirmar" id="ga-conectar" hidden>Conectar Google Agenda</button>
+              <button class="btn btn-recusar" id="ga-desconectar" hidden>Desconectar</button>
+            </div>
+          </div>
+        </section>
     </div>
 
     <div class="view" data-view="financeiro">
@@ -909,8 +920,67 @@ function iniciarApp(sessao){
     carregarAparencia();
     aplicarPapel();
     bioTravarSePreciso();
+    ligarGoogleAgenda();
   }
   carregarTudo();
+}
+
+/* ---------- conexão Google Agenda (Fase B) ---------- */
+async function gaChamar(acao){
+  const { data: sess } = await sb.auth.getSession();
+  const resp = await fetch(SUPABASE_URL + "/functions/v1/google-agenda-oauth", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + sess.session.access_token, "apikey": SUPABASE_ANON_KEY },
+    body: JSON.stringify({ acao })
+  });
+  const r = await resp.json();
+  if (!resp.ok) throw new Error(r.erro || ("Erro " + resp.status));
+  return r;
+}
+async function gaAtualizarStatus(){
+  const txt = $("ga-texto"), badge = $("ga-estado");
+  try {
+    const r = await gaChamar("status");
+    if (r.conectado) {
+      badge.textContent = "conectada";
+      txt.textContent = "Conectada à conta " + (r.google_email || "Google") + ". Cirurgias confirmadas entram na sua agenda automaticamente.";
+      $("ga-conectar").hidden = true; $("ga-desconectar").hidden = false;
+    } else {
+      badge.textContent = "não conectada";
+      txt.textContent = "Conecte sua conta Google para que as cirurgias confirmadas apareçam na sua agenda automaticamente.";
+      $("ga-conectar").hidden = false; $("ga-desconectar").hidden = true;
+    }
+  } catch (err) {
+    badge.textContent = "";
+    txt.textContent = "Não foi possível verificar a conexão: " + (err.message || err);
+    $("ga-conectar").hidden = false; $("ga-desconectar").hidden = true;
+  }
+}
+function ligarGoogleAgenda(){
+  gaAtualizarStatus();
+  $("ga-conectar").addEventListener("click", async () => {
+    const b = $("ga-conectar"); b.disabled = true; b.textContent = "Abrindo o Google…";
+    try {
+      const r = await gaChamar("start");
+      window.open(r.url, "_blank");
+      $("ga-texto").textContent = "Autorize na janela do Google e depois volte aqui — o status atualiza sozinho.";
+      const timer = setInterval(async () => {
+        const s = await gaChamar("status").catch(() => null);
+        if (s && s.conectado) { clearInterval(timer); gaAtualizarStatus(); toast("Google Agenda conectada!"); }
+      }, 4000);
+      setTimeout(() => clearInterval(timer), 5 * 60 * 1000);
+    } catch (err) {
+      toast("Falha: " + (err.message || err));
+    } finally {
+      b.disabled = false; b.textContent = "Conectar Google Agenda";
+    }
+  });
+  $("ga-desconectar").addEventListener("click", async () => {
+    if (!confirm("Desconectar o Google Agenda? Novas cirurgias deixarão de entrar na agenda.")) return;
+    try { await gaChamar("desconectar"); toast("Google Agenda desconectada."); }
+    catch (err) { toast("Falha: " + (err.message || err)); }
+    gaAtualizarStatus();
+  });
 }
 
 /* ---------- realtime ---------- */
