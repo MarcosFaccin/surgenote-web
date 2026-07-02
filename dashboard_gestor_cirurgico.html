@@ -248,6 +248,10 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .dt-item .rm{background:none;border:none;color:var(--vermelho);font-size:.95rem;padding:0 4px}
 .dt-pagamento{border-top:1px solid var(--linha);padding-top:14px}
 
+/* trava biométrica */
+.bio-trava{position:fixed;inset:0;z-index:100;background:var(--papel);display:flex;align-items:center;justify-content:center;padding:24px}
+.bio-cartao{background:var(--branco);border:1px solid var(--linha);border-radius:14px;padding:32px 28px;max-width:340px;width:100%;text-align:center}
+
 /* contratos */
 .contrato{border:1px solid var(--linha);border-radius:10px;padding:12px 14px;margin-bottom:12px}
 .contrato-nome{font-family:var(--display);font-weight:700;color:var(--titulo);margin-bottom:8px}
@@ -367,6 +371,15 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
         <button class="ap-cor" data-cor="#3A4642" style="background:#3A4642" title="Grafite"></button>
         <label class="ap-cor ap-cor-livre" title="Cor livre">＋<input type="color" id="ap-cor-input"></label>
       </div>
+    </div>
+    <div class="ap-grupo">
+      <span class="ap-rotulo">Privacidade</span>
+      <label style="display:flex;align-items:center;gap:7px;font-size:.82rem;margin-bottom:7px">
+        <input type="checkbox" id="ap-discreto"> Modo discreto no WhatsApp (mensagens sem valores)
+      </label>
+      <label style="display:flex;align-items:center;gap:7px;font-size:.82rem">
+        <input type="checkbox" id="ap-bio"> Pedir biometria ao abrir (neste aparelho)
+      </label>
     </div>
     <div class="ap-grupo">
       <span class="ap-rotulo">Nome no topo</span>
@@ -631,6 +644,16 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
   </div>
 </div>
 
+<div id="bio-trava" class="bio-trava" hidden>
+  <div class="bio-cartao">
+    <div style="font-size:2rem;margin-bottom:8px">🔒</div>
+    <h3 style="font-family:var(--display);color:var(--titulo);margin-bottom:6px">Painel bloqueado</h3>
+    <p style="font-size:.86rem;color:var(--cinza);margin-bottom:16px">Confirme sua identidade para continuar.</p>
+    <button class="btn btn-confirmar" id="bio-abrir" style="width:100%;justify-content:center">Desbloquear com biometria</button>
+    <button class="btn btn-recusar" id="bio-senha" style="width:100%;justify-content:center;margin-top:8px">Sair e entrar com senha</button>
+  </div>
+</div>
+
 <div id="toasts" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.50.0/dist/umd/supabase.min.js" integrity="sha384-jP+y6mxch/vbLrNpx4basfv6ciZQuHwdRHgZGa6Mhja0Xm4p87ok2OQavTrRIGxH" crossorigin="anonymous"></script>
@@ -685,7 +708,7 @@ function inicioMes(){
 }
 
 /* ---------- aparência (tema, cor da marca, logo) ---------- */
-let prefAparencia = { tema: "sistema", cor_primaria: "#1D5468", logo_data: null, nome_exibicao: "" };
+let prefAparencia = { tema: "sistema", cor_primaria: "#1D5468", logo_data: null, nome_exibicao: "", modo_discreto: false };
 const midiaEscuro = window.matchMedia("(prefers-color-scheme: dark)");
 
 function aplicarAparencia(){
@@ -699,6 +722,8 @@ function aplicarAparencia(){
     else { logo.hidden = true; logo.removeAttribute("src"); }
   }
   $("titulo-app").textContent = (p.nome_exibicao || "").trim() || "Gestão Cirúrgica";
+  $("ap-discreto").checked = !!p.modo_discreto;
+  $("ap-bio").checked = bioAtivada();
   if (document.activeElement !== $("ap-nome")) $("ap-nome").value = p.nome_exibicao || "";
   document.querySelectorAll(".ap-temas button").forEach(b => b.classList.toggle("ativo", b.dataset.tema === p.tema));
   document.querySelectorAll(".ap-cor[data-cor]").forEach(b => b.classList.toggle("ativo", b.dataset.cor.toLowerCase() === p.cor_primaria.toLowerCase()));
@@ -716,14 +741,15 @@ async function salvarAparencia(){
     cor_primaria: prefAparencia.cor_primaria,
     logo_data: prefAparencia.logo_data,
     nome_exibicao: prefAparencia.nome_exibicao || null,
+    modo_discreto: !!prefAparencia.modo_discreto,
     updated_at: new Date().toISOString()
   });
 }
 
 async function carregarAparencia(){
-  const { data } = await sb.from("medico_preferencias").select("tema,cor_primaria,logo_data,nome_exibicao").maybeSingle();
+  const { data } = await sb.from("medico_preferencias").select("tema,cor_primaria,logo_data,nome_exibicao,modo_discreto").maybeSingle();
   if (data) {
-    prefAparencia = { tema: data.tema, cor_primaria: data.cor_primaria, logo_data: data.logo_data, nome_exibicao: data.nome_exibicao || "" };
+    prefAparencia = { tema: data.tema, cor_primaria: data.cor_primaria, logo_data: data.logo_data, nome_exibicao: data.nome_exibicao || "", modo_discreto: !!data.modo_discreto };
     aplicarAparencia();
   }
 }
@@ -767,6 +793,23 @@ function ligarAparencia(){
   $("ap-cor-input").addEventListener("change", (e) => { prefAparencia.cor_primaria = e.target.value; salvarAparencia(); });
   $("ap-logo-file").addEventListener("change", (e) => { if (e.target.files[0]) lerLogo(e.target.files[0]); e.target.value = ""; });
   $("ap-logo-remover").addEventListener("click", () => { prefAparencia.logo_data = null; salvarAparencia(); toast("Logomarca removida."); });
+  $("ap-discreto").addEventListener("change", () => {
+    prefAparencia.modo_discreto = $("ap-discreto").checked;
+    salvarAparencia();
+    toast(prefAparencia.modo_discreto ? "Modo discreto ligado — WhatsApp sem valores." : "Modo discreto desligado.");
+  });
+  $("ap-bio").addEventListener("change", async () => {
+    if ($("ap-bio").checked) {
+      const ok = await bioRegistrar();
+      if (!ok) $("ap-bio").checked = false;
+    } else {
+      localStorage.removeItem("bio_lock");
+      localStorage.removeItem("bio_cred");
+      toast("Biometria desativada neste aparelho.");
+    }
+  });
+  $("bio-abrir").addEventListener("click", bioDesbloquear);
+  $("bio-senha").addEventListener("click", async () => { localStorage.removeItem("bio_lock"); await sb.auth.signOut(); location.reload(); });
   let nomeTimer = null;
   $("ap-nome").addEventListener("input", () => {
     prefAparencia.nome_exibicao = $("ap-nome").value;
@@ -851,6 +894,7 @@ function iniciarApp(sessao){
     ligarRealtime();
     carregarAparencia();
     aplicarPapel();
+    bioTravarSePreciso();
   }
   carregarTudo();
 }
@@ -2010,6 +2054,53 @@ async function buscarProcedimentosTodos(termo){
   (prop.data || []).forEach(p => lista.push({ nome: p.nome, rotulo: p.categoria + " · " + brl.format(Number(p.valor)), valor: Number(p.valor), proprio: true }));
   (cat.data || []).forEach(p => lista.push({ nome: p.nome, rotulo: p.codigo + " · " + (p.tabela === "sus" ? "SUS" : "CBHPM"), proprio: false }));
   return lista;
+}
+
+/* ---------- biometria (trava local do aparelho, WebAuthn) ---------- */
+function bioAtivada(){ try { return localStorage.getItem("bio_lock") === "1"; } catch (e) { return false; } }
+
+async function bioRegistrar(){
+  if (!window.PublicKeyCredential) { toast("Este navegador não suporta biometria.", true); return false; }
+  try {
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rp: { name: "SurgeNote" },
+      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "surgenote", displayName: "SurgeNote" },
+      pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+      timeout: 60000
+    }});
+    localStorage.setItem("bio_cred", btoa(String.fromCharCode(...new Uint8Array(cred.rawId))));
+    localStorage.setItem("bio_lock", "1");
+    toast("Biometria ativada neste aparelho.");
+    return true;
+  } catch (e) {
+    toast("Biometria não configurada: " + (e.message || e), true);
+    return false;
+  }
+}
+
+async function bioDesbloquear(){
+  try {
+    const idB64 = localStorage.getItem("bio_cred") || "";
+    const allow = idB64 ? [{ type: "public-key", id: Uint8Array.from(atob(idB64), c => c.charCodeAt(0)) }] : [];
+    await navigator.credentials.get({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      allowCredentials: allow,
+      userVerification: "required",
+      timeout: 60000
+    }});
+    $("bio-trava").hidden = true;
+  } catch (e) {
+    toast("Não foi possível desbloquear. Tente de novo ou use a senha.", true);
+  }
+}
+
+function bioTravarSePreciso(){
+  if (bioAtivada() && location.protocol === "https:") {
+    $("bio-trava").hidden = false;
+    bioDesbloquear();
+  }
 }
 
 /* ---------- ações ---------- */
