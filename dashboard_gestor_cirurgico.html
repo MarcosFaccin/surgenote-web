@@ -135,6 +135,9 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 
 /* ---------- personalização ---------- */
 .logo-medico{height:34px;max-width:150px;object-fit:contain;border-radius:6px;background:rgba(255,255,255,.9);padding:3px 6px}
+.sn-selo{display:flex;align-items:center;gap:7px;font-family:var(--display);font-weight:700;font-size:.86rem;color:rgba(255,255,255,.85);letter-spacing:.02em}
+.sn-selo img{width:22px;height:22px;border-radius:6px}
+@media (max-width: 640px){.sn-selo{display:none}}
 .ap-painel{
   position:fixed;top:64px;right:20px;z-index:60;width:290px;
   background:var(--branco);border:1px solid var(--linha);border-radius:12px;
@@ -256,6 +259,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
     <div class="marca"><span id="titulo-app">Gestão Cirúrgica</span><small>por <b>SurgeNote</b> · iddeia</small></div>
     <div class="aovivo" id="aovivo"><span class="ponto"></span><span id="aovivo-txt">conectando…</span></div>
     <div class="espaco"></div>
+    <span class="sn-selo" title="SurgeNote — iddeia"><img src="icon-192.png" alt="SurgeNote">SurgeNote</span>
     <span class="usuario" id="usuario-email"></span>
     <button class="btn-sair" id="btn-aparencia" title="Personalizar aparência">Aparência</button>
     <button class="btn-sair" id="btn-sair">Sair</button>
