@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestão Cirúrgica — Painel do Gestor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Instrument+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --verde:#0E5A4E; --verde-escuro:#083A33; --verde-tinta:#DDEEE9;
+  --papel:#F4F6F3; --branco:#FFFFFF; --grafite:#1C2421; --cinza:#5C6662;
+  --linha:#DCE3DF; --ambar:#B97A14; --ambar-tinta:#F6ECD9;
+  --vermelho:#A33B2E; --vermelho-tinta:#F4E2DE; --petroleo:#225E75; --petroleo-tinta:#DFEAF0;
+  --raio:10px;
+  --display:"Bricolage Grotesque",sans-serif; --corpo:"Instrument Sans",sans-serif; --mono:"Spline Sans Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{font-family:var(--corpo);background:var(--papel);color:var(--grafite);line-height:1.55;min-height:100vh}
+button{font-family:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--verde);outline-offset:2px;border-radius:4px}
+[hidden]{display:none!important}
+
+/* ---------- telas de setup e login ---------- */
+.gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.gate-card{background:var(--branco);border:1px solid var(--linha);border-radius:var(--raio);padding:40px;max-width:480px;width:100%}
+.gate-card h1{font-family:var(--display);font-size:1.6rem;color:var(--verde-escuro);margin-bottom:6px}
+.gate-card p{color:var(--cinza);font-size:.95rem;margin-bottom:20px}
+.gate-card ol{margin:0 0 8px 20px;color:var(--cinza);font-size:.92rem}
+.gate-card ol li{margin-bottom:8px}
+.gate-card code{font-family:var(--mono);font-size:.85em;background:var(--verde-tinta);padding:1px 6px;border-radius:4px;color:var(--verde-escuro)}
+.campo{display:block;margin-bottom:14px}
+.campo span{display:block;font-size:.85rem;font-weight:600;margin-bottom:5px}
+.campo input{width:100%;padding:11px 12px;border:1px solid var(--linha);border-radius:8px;font:inherit;background:var(--papel)}
+.campo input:focus{border-color:var(--verde);outline:none;box-shadow:0 0 0 3px var(--verde-tinta)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:none;border-radius:8px;padding:11px 18px;font-weight:600;font-size:.95rem;transition:filter .15s}
+.btn:hover{filter:brightness(1.08)}
+.btn-primario{background:var(--verde);color:#fff;width:100%;justify-content:center}
+.btn-confirmar{background:var(--verde);color:#fff;padding:8px 14px;font-size:.88rem}
+.btn-recusar{background:transparent;color:var(--vermelho);border:1px solid var(--vermelho);padding:8px 14px;font-size:.88rem}
+.btn-recusar:hover{background:var(--vermelho-tinta)}
+.erro-login{color:var(--vermelho);font-size:.88rem;margin-top:10px;min-height:1.2em}
+
+/* ---------- app ---------- */
+header.topo{background:var(--verde-escuro);color:#fff;padding:14px 28px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.marca{font-family:var(--display);font-weight:700;font-size:1.15rem;letter-spacing:.2px}
+.marca small{display:block;font-family:var(--corpo);font-weight:400;font-size:.72rem;opacity:.75;letter-spacing:.4px}
+.aovivo{display:flex;align-items:center;gap:7px;font-size:.78rem;background:rgba(255,255,255,.08);padding:5px 12px;border-radius:99px}
+.ponto{width:8px;height:8px;border-radius:50%;background:#8E9B96}
+.aovivo.on .ponto{background:#5BD8A0}
+@media (prefers-reduced-motion: no-preference){
+  .aovivo.on .ponto{animation:pulsa 1.6s ease-in-out infinite}
+  @keyframes pulsa{0%,100%{box-shadow:0 0 0 0 rgba(91,216,160,.5)}50%{box-shadow:0 0 0 6px rgba(91,216,160,0)}}
+}
+.topo .espaco{flex:1}
+.usuario{font-size:.82rem;opacity:.85}
+.btn-sair{background:transparent;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:7px 14px;font-size:.84rem}
+.btn-sair:hover{background:rgba(255,255,255,.12)}
+
+main{max-width:1240px;margin:0 auto;padding:26px 28px 60px}
+.faixa-erro{background:var(--vermelho-tinta);border:1px solid var(--vermelho);color:var(--vermelho);border-radius:8px;padding:12px 16px;font-size:.9rem;margin-bottom:20px}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:30px}
+.kpi{background:var(--branco);border:1px solid var(--linha);border-radius:var(--raio);padding:18px 20px}
+.kpi .rotulo{font-size:.72rem;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--cinza)}
+.kpi .valor{font-family:var(--display);font-weight:700;font-size:1.9rem;color:var(--verde-escuro);font-variant-numeric:tabular-nums;margin-top:4px;line-height:1.1}
+.kpi .sub{font-size:.78rem;color:var(--cinza);margin-top:4px}
+.kpi.atencao .valor{color:var(--ambar)}
+.kpi.alerta .valor{color:var(--vermelho)}
+
+/* grade principal */
+.grade{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:22px}
+@media (max-width: 980px){.grade{grid-template-columns:1fr}}
+.painel{background:var(--branco);border:1px solid var(--linha);border-radius:var(--raio)}
+.painel-cab{padding:16px 20px;border-bottom:1px solid var(--linha);display:flex;align-items:baseline;gap:10px}
+.painel-cab h2{font-family:var(--display);font-size:1.05rem;font-weight:700;color:var(--verde-escuro)}
+.painel-cab .conta{font-family:var(--mono);font-size:.8rem;color:var(--cinza)}
+.painel-cab .recarregar{margin-left:auto;background:none;border:none;color:var(--verde);font-size:.82rem;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.painel-corpo{padding:14px 20px 20px}
+
+/* fila — assinatura visual */
+.cartao{position:relative;border:1px solid var(--linha);border-left:4px solid var(--ambar);border-radius:8px;padding:16px 16px 14px;margin-top:12px;background:var(--branco);transition:background .4s}
+.cartao.novo{background:var(--ambar-tinta)}
+.cartao h3{font-family:var(--display);font-weight:600;font-size:1.02rem;padding-right:120px}
+.protocolo{position:absolute;top:12px;right:12px;font-family:var(--mono);font-size:.78rem;color:var(--verde-escuro);border:1.5px dashed var(--verde);border-radius:6px;padding:3px 9px;transform:rotate(-2deg);background:var(--verde-tinta)}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.84rem;color:var(--cinza);margin:8px 0 12px}
+.meta b{color:var(--grafite);font-weight:600}
+.acoes{display:flex;gap:10px}
+.vazio{border:1px dashed var(--linha);border-radius:8px;padding:26px;text-align:center;color:var(--cinza);font-size:.92rem;margin-top:12px}
+
+/* pipeline e recentes */
+.barra-linha{display:grid;grid-template-columns:150px 1fr 32px;align-items:center;gap:10px;margin-top:10px;font-size:.84rem}
+.barra-trilho{background:var(--papel);border-radius:6px;height:14px;overflow:hidden}
+.barra-fill{height:100%;border-radius:6px;background:var(--verde)}
+.barra-num{font-family:var(--mono);text-align:right;color:var(--cinza)}
+.recente{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--linha);font-size:.88rem}
+.recente:last-child{border-bottom:none}
+.recente .info{flex:1;min-width:0}
+.recente .info .nome{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recente .info .sub{font-size:.76rem;color:var(--cinza)}
+.badge{font-size:.7rem;font-weight:600;letter-spacing:.4px;padding:3px 9px;border-radius:99px;white-space:nowrap}
+.st-aguardando_confirmacao{background:var(--ambar-tinta);color:var(--ambar)}
+.st-confirmada{background:var(--verde-tinta);color:var(--verde)}
+.st-realizada{background:var(--verde-tinta);color:var(--verde-escuro)}
+.st-faturada{background:var(--petroleo-tinta);color:var(--petroleo)}
+.st-paga{background:var(--verde);color:#fff}
+.st-glosada{background:var(--vermelho-tinta);color:var(--vermelho)}
+.st-cancelada{background:#ECEFED;color:var(--cinza)}
+.sel-status{font:inherit;font-size:.76rem;border:1px solid var(--linha);border-radius:6px;padding:4px 6px;background:var(--papel);color:var(--grafite)}
+
+/* toast */
+#toasts{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:50}
+.toast{background:var(--verde-escuro);color:#fff;border-radius:8px;padding:11px 16px;font-size:.88rem;box-shadow:0 6px 18px rgba(8,58,51,.25)}
+.toast.ruim{background:var(--vermelho)}
+@media (max-width: 640px){
+  header.topo{padding:12px 16px}
+  main{padding:18px 16px 50px}
+  .cartao h3{padding-right:0}
+  .protocolo{position:static;display:inline-block;margin-top:8px;transform:rotate(-2deg)}
+}
+</style>
+</head>
+<body>
+
+<!-- TELA: configuração pendente -->
+<div id="view-setup" class="gate" hidden>
+  <div class="gate-card">
+    <h1>Configure a conexão</h1>
+    <p>Este painel ainda não está apontado para o seu projeto Supabase.</p>
+    <ol>
+      <li>Abra este arquivo num editor e localize o bloco <code>CONFIG</code> no topo do <code>&lt;script&gt;</code>.</li>
+      <li>Preencha <code>SUPABASE_URL</code> e <code>SUPABASE_ANON_KEY</code> (Supabase → Settings → API).</li>
+      <li>No Supabase, crie um usuário para o gestor em <code>Authentication → Users</code>.</li>
+      <li>Rode o arquivo <code>schema_gestao_cirurgica.sql</code> no SQL Editor, salve e recarregue esta página.</li>
+    </ol>
+  </div>
+</div>
+
+<!-- TELA: login -->
+<div id="view-login" class="gate" hidden>
+  <div class="gate-card">
+    <h1>Gestão Cirúrgica</h1>
+    <p>Acesso do gestor. Entre com o usuário criado no Supabase.</p>
+    <label class="campo"><span>E-mail</span><input type="email" id="login-email" autocomplete="username" placeholder="gestor@clinica.com.br"></label>
+    <label class="campo"><span>Senha</span><input type="password" id="login-senha" autocomplete="current-password" placeholder="••••••••"></label>
+    <button class="btn btn-primario" id="btn-entrar">Entrar no painel</button>
+    <p class="erro-login" id="login-erro"></p>
+  </div>
+</div>
+
+<!-- TELA: app -->
+<div id="view-app" hidden>
+  <header class="topo">
+    <div class="marca">Gestão Cirúrgica<small>painel do gestor</small></div>
+    <div class="aovivo" id="aovivo"><span class="ponto"></span><span id="aovivo-txt">conectando…</span></div>
+    <div class="espaco"></div>
+    <span class="usuario" id="usuario-email"></span>
+    <button class="btn-sair" id="btn-sair">Sair</button>
+  </header>
+
+  <main>
+    <div class="faixa-erro" id="faixa-erro" hidden></div>
+
+    <section class="kpis" aria-label="Indicadores do mês">
+      <div class="kpi atencao"><div class="rotulo">Aguardando confirmação</div><div class="valor" id="kpi-fila">–</div><div class="sub">solicitações na fila</div></div>
+      <div class="kpi"><div class="rotulo">Cirurgias no mês</div><div class="valor" id="kpi-mes">–</div><div class="sub" id="kpi-mes-sub">registradas em <span id="mes-nome"></span></div></div>
+      <div class="kpi"><div class="rotulo">Valor previsto</div><div class="valor" id="kpi-previsto">–</div><div class="sub">soma do mês corrente</div></div>
+      <div class="kpi"><div class="rotulo">Recebido no mês</div><div class="valor" id="kpi-recebido">–</div><div class="sub" id="kpi-recebido-sub">pagamentos lançados</div></div>
+      <div class="kpi alerta"><div class="rotulo">Glosas em aberto</div><div class="valor" id="kpi-glosas">–</div><div class="sub" id="kpi-glosas-sub">a recorrer</div></div>
+    </section>
+
+    <div class="grade">
+      <div style="display:flex;flex-direction:column;gap:22px;min-width:0">
+        <section class="painel" aria-label="Fila de solicitações">
+          <div class="painel-cab">
+            <h2>Fila de confirmação</h2>
+            <span class="conta" id="fila-conta"></span>
+            <button class="recarregar" id="btn-recarregar">Atualizar</button>
+          </div>
+          <div class="painel-corpo" id="fila"></div>
+        </section>
+        <section class="painel" aria-label="Agenda de cirurgias">
+          <div class="painel-cab">
+            <h2>Agenda</h2>
+            <span class="conta" id="ag-conta"></span>
+            <button class="recarregar" id="ag-novo-btn">+ Novo agendamento</button>
+          </div>
+          <div class="painel-corpo" id="ag-form" hidden style="border-bottom:1px solid var(--linha)">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
+              <label class="campo" style="margin:0"><span>Data e hora *</span><input type="datetime-local" id="ag-data"></label>
+              <label class="campo" style="margin:0"><span>Procedimento *</span><input id="ag-proc" placeholder="digite 3+ letras para sugestões" list="ag-proc-lista" autocomplete="off"><datalist id="ag-proc-lista"></datalist></label>
+              <label class="campo" style="margin:0"><span>Paciente</span><input id="ag-pac" placeholder="nome do paciente"></label>
+              <label class="campo" style="margin:0"><span>Hospital</span><input id="ag-hosp" placeholder="local"></label>
+            </div>
+            <div class="acoes" style="margin-top:14px">
+              <button class="btn btn-confirmar" id="ag-salvar">Agendar</button>
+              <button class="btn btn-recusar" id="ag-cancelar">Fechar</button>
+            </div>
+            <p style="font-size:.76rem;color:var(--cinza);margin-top:10px">O agendamento entra como cirurgia confirmada e é enviado ao Google Agenda automaticamente.</p>
+          </div>
+          <div class="painel-corpo" id="agenda"></div>
+        </section>
+        <section class="painel" aria-label="Relatório para hospital ou convênio" style="flex:1">
+          <div class="painel-cab"><h2>Relatório hospital/convênio</h2></div>
+          <div class="painel-corpo">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+              <label class="campo" style="margin:0"><span>Mês de referência</span><input type="month" id="rel-mes"></label>
+              <label class="campo" style="margin:0"><span>Convênio</span><select id="rel-convenio" class="sel-status" style="width:100%;padding:11px 9px;font-size:.88rem"><option value="">Todos</option></select></label>
+              <label class="campo" style="margin:0"><span>Hospital</span><select id="rel-hospital" class="sel-status" style="width:100%;padding:11px 9px;font-size:.88rem"><option value="">Todos</option></select></label>
+            </div>
+            <div class="acoes" style="margin-top:14px">
+              <button class="btn btn-confirmar" id="btn-rel-pdf">Imprimir / PDF</button>
+              <button class="btn btn-recusar" id="btn-rel-csv" style="color:var(--verde);border-color:var(--verde)">Planilha (CSV)</button>
+            </div>
+            <p style="font-size:.76rem;color:var(--cinza);margin-top:10px">⚠️ O relatório contém dados de pacientes. Envie somente ao hospital/convênio responsável pelo atendimento (LGPD).</p>
+          </div>
+        </section>
+      </div>
+
+      <aside style="display:flex;flex-direction:column;gap:22px">
+        <section class="painel" aria-label="Pipeline por status">
+          <div class="painel-cab"><h2>Pipeline do mês</h2></div>
+          <div class="painel-corpo" id="pipeline"></div>
+        </section>
+        <section class="painel" aria-label="Movimentações recentes">
+          <div class="painel-cab"><h2>Recentes</h2></div>
+          <div class="painel-corpo" id="recentes"></div>
+        </section>
+        <section class="painel" aria-label="Conciliação pendente" style="flex:1">
+          <div class="painel-cab"><h2>Conciliação pendente</h2><span class="conta" id="concil-conta"></span></div>
+          <div class="painel-corpo" id="conciliacao"></div>
+        </section>
+      </aside>
+    </div>
+
+    <section class="painel" aria-label="Minha tabela de valores" style="margin-top:22px">
+      <div class="painel-cab">
+        <h2>Minha tabela de valores</h2>
+        <span class="conta" id="mv-conta"></span>
+      </div>
+      <div class="painel-corpo">
+        <p style="font-size:.84rem;color:var(--cinza);margin-bottom:12px">
+          Busque pelo nome ou código CBHPM e defina o SEU valor para o procedimento.
+          Onde você não personalizar, vale o valor de referência.
+        </p>
+        <label class="campo" style="max-width:520px">
+          <span>Buscar procedimento (nome ou código)</span>
+          <input id="mv-busca" placeholder="ex.: colecistectomia ou 3.10.05.47-0" autocomplete="off">
+        </label>
+        <div id="mv-resultados"></div>
+        <div class="painel-cab" style="padding:14px 0 10px;border-bottom:none;border-top:1px solid var(--linha);margin-top:16px">
+          <h2 style="font-size:.95rem">Valores personalizados</h2>
+        </div>
+        <div id="mv-lista"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toasts" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.50.0/dist/umd/supabase.min.js" integrity="sha384-jP+y6mxch/vbLrNpx4basfv6ciZQuHwdRHgZGa6Mhja0Xm4p87ok2OQavTrRIGxH" crossorigin="anonymous"></script>
+<script>
+/* ============ CONFIG (EDITAR) ============ */
+const SUPABASE_URL = "https://qntlelfavjyjwfphcndg.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFudGxlbGZhdmp5andmcGhjbmRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNTE0MzIsImV4cCI6MjA3OTcyNzQzMn0._k38zZfTmBB-rgUessfJ9gsn_eZWhKjfUuG-sSXcn3I";
+
+const ROTULOS = {
+  aguardando_confirmacao: "Aguardando", confirmada: "Confirmada", realizada: "Realizada",
+  faturada: "Faturada", paga: "Paga", glosada: "Glosada", cancelada: "Cancelada"
+};
+const ORDEM_STATUS = ["aguardando_confirmacao","confirmada","realizada","faturada","paga","glosada","cancelada"];
+const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const $ = (id) => document.getElementById(id);
+let sb = null, recemChegadas = new Set();
+
+function mostrar(tela){
+  ["view-setup","view-login","view-app"].forEach(v => $(v).hidden = (v !== tela));
+}
+function toast(msg, ruim){
+  const t = document.createElement("div");
+  t.className = "toast" + (ruim ? " ruim" : "");
+  t.textContent = msg;
+  $("toasts").appendChild(t);
+  setTimeout(() => t.remove(), 4200);
+}
+function fmtFone(tel){
+  const d = String(tel || "").replace(/\D/g, "");
+  if (d.length >= 12) return "(" + d.slice(2,4) + ") " + d.slice(4,9) + "-" + d.slice(9,13);
+  return tel || "—";
+}
+function fmtData(iso, comHora){
+  if (!iso) return "a combinar";
+  const dt = new Date(iso);
+  if (isNaN(dt)) return iso;
+  const op = { day: "2-digit", month: "2-digit" };
+  if (comHora) { op.hour = "2-digit"; op.minute = "2-digit"; }
+  return dt.toLocaleString("pt-BR", op).replace(",", " às");
+}
+function inicioMes(){
+  const a = new Date();
+  return new Date(a.getFullYear(), a.getMonth(), 1).toISOString();
+}
+
+/* ---------- boot ---------- */
+window.addEventListener("DOMContentLoaded", async () => {
+  if (SUPABASE_URL.includes("SEU-PROJETO") || SUPABASE_ANON_KEY.includes("COLE_AQUI")) {
+    mostrar("view-setup");
+    return;
+  }
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  $("btn-entrar").addEventListener("click", entrar);
+  $("login-senha").addEventListener("keydown", (e) => { if (e.key === "Enter") entrar(); });
+  $("btn-sair").addEventListener("click", async () => { await sb.auth.signOut(); });
+  $("btn-recarregar").addEventListener("click", carregarTudo);
+  $("btn-rel-pdf").addEventListener("click", gerarRelatorioPDF);
+  $("btn-rel-csv").addEventListener("click", gerarRelatorioCSV);
+  const hoje = new Date();
+  $("rel-mes").value = hoje.getFullYear() + "-" + String(hoje.getMonth() + 1).padStart(2, "0");
+  $("ag-novo-btn").addEventListener("click", () => { $("ag-form").hidden = !$("ag-form").hidden; });
+  $("ag-cancelar").addEventListener("click", () => { $("ag-form").hidden = true; });
+  $("ag-salvar").addEventListener("click", agCriar);
+  $("ag-proc").addEventListener("input", () => {
+    clearTimeout(agProcTimer);
+    agProcTimer = setTimeout(agSugerirProcedimentos, 300);
+  });
+  $("mv-busca").addEventListener("input", () => {
+    clearTimeout(mvTimer);
+    mvTimer = setTimeout(mvBuscar, 350);
+  });
+  sb.auth.onAuthStateChange((_ev, sessao) => {
+    if (sessao) iniciarApp(sessao); else mostrar("view-login");
+  });
+  const { data } = await sb.auth.getSession();
+  if (data.session) iniciarApp(data.session); else mostrar("view-login");
+});
+
+async function entrar(){
+  $("login-erro").textContent = "";
+  const { error } = await sb.auth.signInWithPassword({
+    email: $("login-email").value.trim(),
+    password: $("login-senha").value
+  });
+  if (error) $("login-erro").textContent = "Não foi possível entrar: " + error.message;
+}
+
+let appIniciado = false;
+function iniciarApp(sessao){
+  mostrar("view-app");
+  $("usuario-email").textContent = sessao.user.email || "";
+  $("mes-nome").textContent = new Date().toLocaleString("pt-BR", { month: "long" });
+  if (!appIniciado) {
+    appIniciado = true;
+    ligarRealtime();
+  }
+  carregarTudo();
+}
+
+/* ---------- realtime ---------- */
+function ligarRealtime(){
+  sb.channel("cirurgias-live")
+    .on("postgres_changes", { event: "*", schema: "public", table: "cirurgias" }, (payload) => {
+      if (payload.eventType === "INSERT" && payload.new && payload.new.id) {
+        recemChegadas.add(payload.new.id);
+        toast("Nova solicitação recebida pela Ísis");
+      }
+      carregarTudo();
+    })
+    .subscribe((status) => {
+      const ok = status === "SUBSCRIBED";
+      $("aovivo").classList.toggle("on", ok);
+      $("aovivo-txt").textContent = ok ? "ao vivo" : "reconectando…";
+    });
+}
+
+/* ---------- dados ---------- */
+async function carregarTudo(){
+  $("faixa-erro").hidden = true;
+  const ini = inicioMes();
+  try {
+    const [fila, mes, recentes, filtrosRel] = await Promise.all([
+      sb.from("vw_cirurgias_completa").select("*").eq("status", "aguardando_confirmacao").order("created_at", { ascending: false }),
+      sb.from("cirurgias").select("id,status,valor_previsto,created_at").gte("created_at", ini),
+      sb.from("vw_cirurgias_completa").select("*").neq("status", "aguardando_confirmacao").order("created_at", { ascending: false }).limit(15),
+      sb.from("vw_cirurgias_completa").select("convenio_ref,convenio_nome,hospital_ref,hospital_nome").limit(1000)
+    ]);
+    if (fila.error) throw fila.error;
+    renderFila(fila.data || []);
+    renderPipeline(mes.data || []);
+    renderRecentes(recentes.data || []);
+    renderKpis(fila.data || [], mes.data || []);
+    popularFiltrosRelatorio(filtrosRel.data || []);
+  } catch (e) {
+    $("faixa-erro").hidden = false;
+    $("faixa-erro").textContent = "Erro ao ler a tabela cirurgias: " + (e.message || e) +
+      ". Verifique se o schema foi aplicado e, se o RLS estiver ativo, se existe policy de leitura para usuários autenticados.";
+  }
+  carregarFinanceiro();
+  carregarConciliacao();
+  carregarAgenda();
+  mvListar();
+}
+
+async function carregarConciliacao(){
+  const alvo = $("conciliacao");
+  try {
+    const pend = await sb.from("vw_conciliacao_pendente").select("*").order("created_at", { ascending: false }).limit(20);
+    if (pend.error) throw pend.error;
+    const linhas = pend.data || [];
+    $("concil-conta").textContent = linhas.length ? linhas.length + " pendente(s)" : "";
+    if (!linhas.length) {
+      alvo.innerHTML = '<div class="vazio">Sem linhas pendentes. Demonstrativos enviados que não casarem automaticamente aparecem aqui para você ligar à cirurgia certa.</div>';
+      return;
+    }
+    // busca cirurgias candidatas (realizadas/faturadas) para o seletor
+    const cand = await sb.from("vw_cirurgias_completa").select("id,nome_procedimento,paciente_nome,data_realizacao,protocolo").in("status", ["realizada","faturada"]).order("data_realizacao", { ascending: false }).limit(200);
+    const candidatas = cand.data || [];
+    alvo.innerHTML = "";
+    linhas.forEach((l) => {
+      const card = document.createElement("article");
+      card.className = "cartao";
+      card.style.borderLeftColor = "var(--petroleo)";
+      card.innerHTML =
+        '<h3></h3>' +
+        '<div class="meta">' +
+          '<span>Convênio: <b class="c-conv"></b></span>' +
+          '<span>Data: <b class="c-data"></b></span>' +
+          '<span>Pago: <b class="c-valor"></b></span>' +
+        '</div>' +
+        '<div class="acoes" style="gap:8px;align-items:center">' +
+          '<select class="sel-status c-sel" style="flex:1" aria-label="Ligar à cirurgia"></select>' +
+          '<button class="btn btn-confirmar c-btn">Conciliar</button>' +
+        '</div>';
+      card.querySelector("h3").textContent = l.procedimento_nome || l.paciente_nome || "Linha sem identificação";
+      card.querySelector(".c-conv").textContent = l.convenio_nome || "—";
+      card.querySelector(".c-data").textContent = fmtData(l.data_procedimento, false);
+      card.querySelector(".c-valor").textContent = l.valor_pago != null ? brl.format(Number(l.valor_pago)) : "—";
+      const sel = card.querySelector(".c-sel");
+      const vazio = document.createElement("option");
+      vazio.value = ""; vazio.textContent = "Escolha a cirurgia…";
+      sel.appendChild(vazio);
+      candidatas.forEach((c) => {
+        const op = document.createElement("option");
+        op.value = c.id;
+        op.textContent = (c.protocolo ? "Nº" + c.protocolo + " · " : "") + (c.paciente_nome || "s/ paciente") + " · " + (c.nome_procedimento || "") + " · " + fmtData(c.data_realizacao, false);
+        sel.appendChild(op);
+      });
+      card.querySelector(".c-btn").addEventListener("click", () => conciliarManual(l.id, sel.value));
+      alvo.appendChild(card);
+    });
+  } catch (e) {
+    alvo.innerHTML = '<div class="vazio">Fila de conciliação indisponível: ' + (e.message || e) + ' (rode o schema_conciliacao_v4.sql).</div>';
+  }
+}
+
+async function conciliarManual(linhaId, cirurgiaId){
+  if (!cirurgiaId) { toast("Escolha a cirurgia para conciliar.", true); return; }
+  try {
+    const { error } = await sb.rpc("conciliar_linha_manual", { p_linha: linhaId, p_cirurgia: Number(cirurgiaId) });
+    if (error) throw error;
+    toast("Linha conciliada.");
+    carregarTudo();
+  } catch (e) {
+    toast("Não foi possível conciliar: " + (e.message || e), true);
+  }
+}
+
+async function carregarFinanceiro(){
+  const iniData = inicioMes().slice(0, 10);
+  try {
+    const pg = await sb.from("pagamentos").select("valor,data_pagamento").gte("data_pagamento", iniData);
+    if (pg.error) throw pg.error;
+    const total = (pg.data || []).reduce((s, p) => s + Number(p.valor || 0), 0);
+    $("kpi-recebido").textContent = brl.format(total);
+    $("kpi-recebido-sub").textContent = (pg.data || []).length + " pagamento(s) no mês";
+  } catch (e) {
+    $("kpi-recebido").textContent = "—";
+    $("kpi-recebido-sub").textContent = "tabela pagamentos indisponível";
+  }
+  try {
+    const gl = await sb.from("glosas").select("valor_glosado,status").in("status", ["aberta", "recurso_enviado"]);
+    if (gl.error) throw gl.error;
+    const soma = (gl.data || []).reduce((s, g) => s + Number(g.valor_glosado || 0), 0);
+    $("kpi-glosas").textContent = String((gl.data || []).length);
+    $("kpi-glosas-sub").textContent = brl.format(soma) + " a recorrer";
+  } catch (e) {
+    $("kpi-glosas").textContent = "—";
+    $("kpi-glosas-sub").textContent = "tabela glosas indisponível";
+  }
+}
+
+/* ---------- renderização ---------- */
+function renderKpis(fila, mes){
+  $("kpi-fila").textContent = String(fila.length);
+  const validas = mes.filter(c => c.status !== "cancelada");
+  $("kpi-mes").textContent = String(validas.length);
+  const previsto = validas.reduce((s, c) => s + Number(c.valor_previsto || 0), 0);
+  $("kpi-previsto").textContent = previsto > 0 ? brl.format(previsto) : "R$ 0,00";
+}
+
+function renderFila(linhas){
+  $("fila-conta").textContent = linhas.length ? linhas.length + " pendente(s)" : "";
+  const alvo = $("fila");
+  if (!linhas.length) {
+    alvo.innerHTML = '<div class="vazio">Nenhuma solicitação pendente. Quando a Ísis registrar um pedido pelo WhatsApp, ele aparece aqui ao vivo.</div>';
+    return;
+  }
+  alvo.innerHTML = "";
+  linhas.forEach((c) => {
+    const card = document.createElement("article");
+    card.className = "cartao" + (recemChegadas.has(c.id) ? " novo" : "");
+    card.innerHTML =
+      '<h3></h3>' +
+      '<span class="protocolo"></span>' +
+      '<div class="meta">' +
+        '<span>Paciente: <b class="m-fone"></b></span>' +
+        '<span>Data desejada: <b class="m-data"></b></span>' +
+        '<span>Recebida: <b class="m-criada"></b></span>' +
+        (c.valor_previsto ? '<span>Previsto: <b class="m-prev"></b></span>' : '') +
+      '</div>' +
+      '<div class="acoes">' +
+        '<button class="btn btn-confirmar">Confirmar cirurgia</button>' +
+        '<button class="btn btn-recusar">Recusar</button>' +
+      '</div>';
+    card.querySelector("h3").textContent = c.nome_procedimento || "Procedimento não informado";
+    card.querySelector(".protocolo").textContent = "Nº " + (c.protocolo || "—");
+    card.querySelector(".m-fone").textContent = fmtFone(c.paciente_telefone);
+    card.querySelector(".m-data").textContent = fmtData(c.data_cirurgia, true);
+    card.querySelector(".m-criada").textContent = fmtData(c.created_at, true);
+    if (c.valor_previsto) card.querySelector(".m-prev").textContent = brl.format(Number(c.valor_previsto));
+    card.querySelector(".btn-confirmar").addEventListener("click", () => mudarStatus(c, "confirmada", "Cirurgia confirmada — protocolo " + (c.protocolo || "")));
+    card.querySelector(".btn-recusar").addEventListener("click", () => {
+      if (window.confirm("Recusar a solicitação " + (c.protocolo || "") + "? O registro vai para o status cancelada.")) {
+        mudarStatus(c, "cancelada", "Solicitação cancelada");
+      }
+    });
+    alvo.appendChild(card);
+  });
+  setTimeout(() => { recemChegadas.clear(); }, 6000);
+}
+
+function renderPipeline(mes){
+  const cont = {};
+  mes.forEach((c) => { cont[c.status] = (cont[c.status] || 0) + 1; });
+  const max = Math.max(1, ...Object.values(cont));
+  const alvo = $("pipeline");
+  const presentes = ORDEM_STATUS.filter((s) => cont[s]);
+  if (!presentes.length) {
+    alvo.innerHTML = '<div class="vazio">Sem registros neste mês ainda.</div>';
+    return;
+  }
+  alvo.innerHTML = "";
+  presentes.forEach((s) => {
+    const linha = document.createElement("div");
+    linha.className = "barra-linha";
+    linha.innerHTML = '<span></span><div class="barra-trilho"><div class="barra-fill"></div></div><span class="barra-num"></span>';
+    linha.children[0].textContent = ROTULOS[s] || s;
+    linha.querySelector(".barra-fill").style.width = Math.round((cont[s] / max) * 100) + "%";
+    linha.querySelector(".barra-num").textContent = cont[s];
+    alvo.appendChild(linha);
+  });
+}
+
+function renderRecentes(linhas){
+  const alvo = $("recentes");
+  if (!linhas.length) {
+    alvo.innerHTML = '<div class="vazio">As cirurgias confirmadas e o histórico aparecem aqui.</div>';
+    return;
+  }
+  alvo.innerHTML = "";
+  linhas.forEach((c) => {
+    const item = document.createElement("div");
+    item.className = "recente";
+    item.innerHTML =
+      '<div class="info"><div class="nome"></div><div class="sub"></div></div>' +
+      '<span class="badge"></span>' +
+      '<select class="sel-status" aria-label="Mudar status"></select>';
+    item.querySelector(".nome").textContent = c.nome_procedimento || "—";
+    item.querySelector(".sub").textContent = (c.protocolo ? "Nº " + c.protocolo + " · " : "") + (c.convenio_ref || c.convenio_nome || "convênio n/d") + (c.hospital_ref || c.hospital_nome ? " · " + (c.hospital_ref || c.hospital_nome) : "") + " · " + fmtData(c.data_realizacao || c.data_cirurgia, false);
+    const badge = item.querySelector(".badge");
+    badge.textContent = ROTULOS[c.status] || c.status;
+    badge.classList.add("st-" + c.status);
+    const sel = item.querySelector(".sel-status");
+    ORDEM_STATUS.forEach((s) => {
+      const op = document.createElement("option");
+      op.value = s; op.textContent = ROTULOS[s];
+      if (s === c.status) op.selected = true;
+      sel.appendChild(op);
+    });
+    sel.addEventListener("change", () => mudarStatus(c, sel.value, "Status atualizado para " + ROTULOS[sel.value]));
+    alvo.appendChild(item);
+  });
+}
+
+/* ---------- relatório hospital/convênio ---------- */
+function escHtml(s){
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function dataRef(c){ return c.data_realizacao || (c.data_cirurgia ? String(c.data_cirurgia).slice(0,10) : null) || (c.created_at ? String(c.created_at).slice(0,10) : null); }
+
+async function buscarLinhasRelatorio(){
+  const mes = $("rel-mes").value; // "2026-06"
+  if (!mes) { toast("Escolha o mês de referência.", true); return null; }
+  const { data, error } = await sb.from("vw_cirurgias_completa").select("*").neq("status","cancelada").order("data_realizacao", { ascending: true });
+  if (error) { toast("Erro ao buscar cirurgias: " + error.message, true); return null; }
+  const conv = $("rel-convenio").value;
+  const hosp = $("rel-hospital").value;
+  const linhas = (data || []).filter(c => {
+    const d = dataRef(c);
+    if (!d || !d.startsWith(mes)) return false;
+    if (conv && (c.convenio_ref || c.convenio_nome || "") !== conv) return false;
+    if (hosp && (c.hospital_ref || c.hospital_nome || "") !== hosp) return false;
+    return true;
+  });
+  if (!linhas.length) { toast("Nenhuma cirurgia no período/filtros escolhidos.", true); return null; }
+  return linhas;
+}
+
+function popularFiltrosRelatorio(cirurgias){
+  const povoar = (id, valores) => {
+    const sel = $(id);
+    const atual = sel.value;
+    sel.innerHTML = '<option value="">Todos</option>';
+    [...new Set(valores.filter(Boolean))].sort().forEach(v => {
+      const op = document.createElement("option");
+      op.value = v; op.textContent = v;
+      sel.appendChild(op);
+    });
+    sel.value = atual;
+  };
+  povoar("rel-convenio", cirurgias.map(c => c.convenio_ref || c.convenio_nome));
+  povoar("rel-hospital", cirurgias.map(c => c.hospital_ref || c.hospital_nome));
+}
+
+async function gerarRelatorioPDF(){
+  const linhas = await buscarLinhasRelatorio();
+  if (!linhas) return;
+  const mes = $("rel-mes").value;
+  const [ano, m] = mes.split("-");
+  const mesNome = new Date(Number(ano), Number(m)-1, 1).toLocaleString("pt-BR", { month: "long", year: "numeric" });
+  const medico = linhas[0].medico_ref || "";
+  const totPrev = linhas.reduce((s,c) => s + Number(c.valor_previsto || 0), 0);
+  const totPago = linhas.reduce((s,c) => s + Number(c.total_pago || c.valor_pago || 0), 0);
+  const filtros = [];
+  if ($("rel-convenio").value) filtros.push("Convênio: " + $("rel-convenio").value);
+  if ($("rel-hospital").value) filtros.push("Hospital: " + $("rel-hospital").value);
+
+  let corpo = "";
+  linhas.forEach(c => {
+    corpo += "<tr>" +
+      "<td>" + escHtml(c.protocolo || "—") + "</td>" +
+      "<td>" + escHtml(dataRef(c) ? dataRef(c).split("-").reverse().join("/") : "—") + "</td>" +
+      "<td>" + escHtml(c.paciente_nome || "—") + (c.carteirinha ? "<br><small>cart. " + escHtml(c.carteirinha) + "</small>" : "") + "</td>" +
+      "<td>" + escHtml(c.nome_procedimento || "—") + "</td>" +
+      "<td>" + escHtml(c.hospital_ref || c.hospital_nome || "—") + "</td>" +
+      "<td>" + escHtml(c.convenio_ref || c.convenio_nome || "—") + "</td>" +
+      "<td>" + escHtml(ROTULOS[c.status] || c.status) + "</td>" +
+      '<td style="text-align:right">' + brl.format(Number(c.valor_previsto || 0)) + "</td>" +
+    "</tr>";
+  });
+
+  const html = "<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>" +
+    "<title>Relatório de cirurgias — " + escHtml(mesNome) + "</title>" +
+    "<style>" +
+    "body{font-family:Arial,Helvetica,sans-serif;color:#1C2421;margin:36px;font-size:13px}" +
+    "h1{font-size:19px;margin:0 0 2px}" +
+    ".sub{color:#5C6662;font-size:12px;margin-bottom:4px}" +
+    "table{width:100%;border-collapse:collapse;margin-top:16px}" +
+    "th{background:#DDEEE9;color:#083A33;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border:1px solid #b9d2cb}" +
+    "td{padding:7px 8px;border:1px solid #DCE3DF;vertical-align:top}" +
+    "td small{color:#5C6662}" +
+    "tfoot td{font-weight:bold;background:#F4F6F3}" +
+    ".rodape{margin-top:28px;color:#5C6662;font-size:11px;border-top:1px solid #DCE3DF;padding-top:10px}" +
+    ".assinatura{margin-top:60px;width:300px;border-top:1px solid #1C2421;text-align:center;padding-top:6px;font-size:12px}" +
+    "@media print{.no-print{display:none}}" +
+    "</style></head><body>" +
+    "<button class='no-print' onclick='window.print()' style='padding:9px 16px;margin-bottom:18px;cursor:pointer'>Imprimir / salvar como PDF</button>" +
+    "<h1>Relatório de cirurgias — " + escHtml(mesNome) + "</h1>" +
+    "<div class='sub'>" + escHtml(medico) + "</div>" +
+    (filtros.length ? "<div class='sub'>" + escHtml(filtros.join(" · ")) + "</div>" : "") +
+    "<div class='sub'>Emitido em " + new Date().toLocaleString("pt-BR") + " · " + linhas.length + " cirurgia(s)</div>" +
+    "<table><thead><tr><th>Protocolo</th><th>Data</th><th>Paciente</th><th>Procedimento</th><th>Hospital</th><th>Convênio</th><th>Status</th><th style='text-align:right'>Valor ref.</th></tr></thead>" +
+    "<tbody>" + corpo + "</tbody>" +
+    "<tfoot><tr><td colspan='7'>Total previsto (referência CBHPM/tabela vigente)</td><td style='text-align:right'>" + brl.format(totPrev) + "</td></tr>" +
+    (totPago > 0 ? "<tr><td colspan='7'>Total já recebido</td><td style='text-align:right'>" + brl.format(totPago) + "</td></tr>" : "") +
+    "</tfoot></table>" +
+    "<div class='rodape'>Documento gerado pelo médico responsável no sistema de gestão cirúrgica. Contém dados pessoais de pacientes (LGPD) — uso restrito ao destinatário. Valores de honorário são de REFERÊNCIA e não substituem o faturamento oficial.</div>" +
+    "<div class='assinatura'>" + escHtml(medico) + "</div>" +
+    "</body></html>";
+
+  const win = window.open("", "_blank");
+  if (!win) { toast("O navegador bloqueou a janela. Libere pop-ups para este arquivo.", true); return; }
+  win.document.write(html);
+  win.document.close();
+}
+
+async function gerarRelatorioCSV(){
+  const linhas = await buscarLinhasRelatorio();
+  if (!linhas) return;
+  const cab = ["protocolo","data","paciente","carteirinha","procedimento","hospital","convenio","status","valor_previsto","valor_recebido"];
+  const csvCel = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+  const corpo = linhas.map(c => [
+    c.protocolo, dataRef(c), c.paciente_nome, c.carteirinha, c.nome_procedimento,
+    c.hospital_ref || c.hospital_nome, c.convenio_ref || c.convenio_nome,
+    ROTULOS[c.status] || c.status,
+    String(Number(c.valor_previsto || 0)).replace(".", ","),
+    String(Number(c.total_pago || c.valor_pago || 0)).replace(".", ",")
+  ].map(csvCel).join(";"));
+  const csv = "﻿" + cab.join(";") + "\n" + corpo.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "relatorio_cirurgias_" + $("rel-mes").value + ".csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("Planilha gerada.");
+}
+
+/* ---------- agenda: autocomplete de procedimento ---------- */
+let agProcTimer = null;
+async function agSugerirProcedimentos(){
+  const termo = $("ag-proc").value.trim();
+  if (termo.length < 3) return;
+  const { data, error } = await sb.from("procedimentos")
+    .select("nome, codigo, tabela")
+    .eq("ativo", true)
+    .ilike("nome", "%" + termo.replace(/[%,]/g, "") + "%")
+    .order("nome")
+    .limit(15);
+  if (error || !data) return;
+  const lista = $("ag-proc-lista");
+  lista.innerHTML = "";
+  data.forEach(p => {
+    const op = document.createElement("option");
+    op.value = p.nome;
+    op.label = p.codigo + " · " + (p.tabela === "sus" ? "SUS" : "CBHPM");
+    lista.appendChild(op);
+  });
+}
+
+/* ---------- agenda: criar agendamento ---------- */
+async function agCriar(){
+  const dataTxt = $("ag-data").value;
+  const proc = $("ag-proc").value.trim();
+  if (!dataTxt || !proc) { toast("Preencha data/hora e procedimento.", true); return; }
+  const quando = new Date(dataTxt);
+  if (isNaN(quando)) { toast("Data inválida.", true); return; }
+  if (quando < new Date()) { toast("A data precisa ser no futuro.", true); return; }
+  const medicoId = await mvMedicoId();
+  if (!medicoId) { toast("Não foi possível identificar seu cadastro de médico.", true); return; }
+  const btn = $("ag-salvar");
+  btn.disabled = true; btn.textContent = "Agendando…";
+  const { error } = await sb.from("cirurgias").insert({
+    medico_id: medicoId,
+    nome_procedimento: proc,
+    paciente_nome: $("ag-pac").value.trim() || null,
+    hospital_nome: $("ag-hosp").value.trim() || null,
+    data_cirurgia: quando.toISOString(),
+    status: "confirmada",
+    protocolo: "AG-" + Date.now().toString(36).toUpperCase(),
+    observacoes: "Agendado pelo dashboard"
+  });
+  btn.disabled = false; btn.textContent = "Agendar";
+  if (error) { toast("Não foi possível agendar: " + error.message, true); return; }
+  toast("Agendamento criado — vai para o Google Agenda em até 5 min.");
+  ["ag-data","ag-proc","ag-pac","ag-hosp"].forEach(id => $(id).value = "");
+  $("ag-form").hidden = true;
+  carregarTudo();
+}
+
+/* ---------- agenda ---------- */
+async function carregarAgenda(){
+  const alvo = $("agenda");
+  try {
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const { data: cirurgias, error } = await sb.from("vw_cirurgias_completa")
+      .select("id,nome_procedimento,paciente_nome,hospital_ref,hospital_nome,data_cirurgia,status")
+      .in("status", ["confirmada","realizada"])
+      .gte("data_cirurgia", hoje.toISOString())
+      .order("data_cirurgia", { ascending: true })
+      .limit(12);
+    if (error) throw error;
+    const { data: eventos } = await sb.from("agenda_eventos").select("cirurgia_id,status");
+    const evPorCirurgia = {};
+    (eventos || []).forEach(e => { evPorCirurgia[e.cirurgia_id] = e.status; });
+    $("ag-conta").textContent = (cirurgias || []).length ? (cirurgias.length + " próxima(s)") : "";
+    if (!cirurgias || !cirurgias.length) {
+      alvo.innerHTML = '<div class="vazio">Nenhuma cirurgia confirmada com data futura. Ao confirmar uma cirurgia com data, ela entra aqui e vai para o Google Agenda.</div>';
+      return;
+    }
+    alvo.innerHTML = "";
+    const rotuloEv = { pendente: ["Aguardando Google", "st-aguardando_confirmacao"], criado: ["Na agenda Google", "st-paga"], erro: ["Erro no Google", "st-glosada"], cancelado: ["Cancelado", "st-cancelada"] };
+    cirurgias.forEach(c => {
+      const item = document.createElement("div");
+      item.className = "recente";
+      item.innerHTML = '<div class="info"><div class="nome"></div><div class="sub"></div></div><span class="badge"></span>';
+      item.querySelector(".nome").textContent = fmtData(c.data_cirurgia, true) + " · " + (c.nome_procedimento || "—");
+      item.querySelector(".sub").textContent = (c.paciente_nome || "paciente n/d") + (c.hospital_ref || c.hospital_nome ? " · " + (c.hospital_ref || c.hospital_nome) : "");
+      const ev = evPorCirurgia[c.id];
+      const [rot, cls] = ev ? (rotuloEv[ev] || [ev, "st-confirmada"]) : ["Sem sincronização", "st-cancelada"];
+      const badge = item.querySelector(".badge");
+      badge.textContent = rot;
+      badge.classList.add(cls);
+      alvo.appendChild(item);
+    });
+  } catch (e) {
+    alvo.innerHTML = '<div class="vazio">Agenda indisponível: ' + (e.message || e) + '</div>';
+  }
+}
+
+/* ---------- minha tabela de valores ---------- */
+let mvTimer = null;
+
+async function mvMedicoId(){
+  const { data, error } = await sb.rpc("medico_atual");
+  if (error || !data) return null;
+  return data;
+}
+
+function mvLinhaHtml(p, comRemover){
+  const item = document.createElement("div");
+  item.className = "recente";
+  item.innerHTML =
+    '<div class="info"><div class="nome"></div><div class="sub"></div></div>' +
+    '<input class="sel-status mv-valor" type="number" min="0" step="0.01" style="width:110px;text-align:right" placeholder="R$">' +
+    '<button class="btn btn-confirmar mv-salvar" style="padding:6px 12px;font-size:.8rem">Salvar</button>' +
+    (comRemover ? '<button class="btn btn-recusar mv-remover" style="padding:6px 12px;font-size:.8rem">Remover</button>' : '');
+  item.querySelector(".nome").textContent = p.nome_procedimento;
+  item.querySelector(".sub").textContent = p.codigo + " · porte " + (p.porte || "—") +
+    " · referência " + brl.format(Number(p.valor_referencia || 0)) +
+    (p.valor_personalizado != null ? " · seu valor " + brl.format(Number(p.valor_personalizado)) : "");
+  const input = item.querySelector(".mv-valor");
+  if (p.valor_personalizado != null) input.value = Number(p.valor_personalizado);
+  item.querySelector(".mv-salvar").addEventListener("click", () => mvSalvar(p, input.value));
+  const rem = item.querySelector(".mv-remover");
+  if (rem) rem.addEventListener("click", () => mvRemover(p));
+  return item;
+}
+
+async function mvBuscar(){
+  const termo = $("mv-busca").value.trim();
+  const alvo = $("mv-resultados");
+  if (termo.length < 3) { alvo.innerHTML = ""; return; }
+  const { data, error } = await sb.from("vw_meus_valores")
+    .select("*")
+    .or("nome_procedimento.ilike.%" + termo.replace(/[%,]/g, "") + "%,codigo.ilike.%" + termo.replace(/[%,]/g, "") + "%")
+    .order("nome_procedimento")
+    .limit(15);
+  if (error) { alvo.innerHTML = '<div class="vazio">Erro na busca: ' + (error.message || "") + '</div>'; return; }
+  if (!data.length) { alvo.innerHTML = '<div class="vazio">Nada encontrado para "' + termo + '".</div>'; return; }
+  alvo.innerHTML = "";
+  data.forEach(p => alvo.appendChild(mvLinhaHtml(p, false)));
+}
+
+async function mvSalvar(p, valorTxt){
+  const valor = Number(valorTxt);
+  if (!valorTxt || isNaN(valor) || valor < 0) { toast("Informe um valor válido.", true); return; }
+  const medicoId = await mvMedicoId();
+  if (!medicoId) { toast("Não foi possível identificar seu cadastro de médico.", true); return; }
+  const { error } = await sb.from("medico_valores").upsert(
+    { medico_id: medicoId, procedimento_id: p.procedimento_id, valor: valor, updated_at: new Date().toISOString() },
+    { onConflict: "medico_id,procedimento_id" }
+  );
+  if (error) { toast("Não foi possível salvar: " + error.message, true); return; }
+  toast("Valor salvo: " + brl.format(valor));
+  mvListar(); mvBuscar();
+}
+
+async function mvRemover(p){
+  if (!window.confirm("Remover seu valor de " + p.nome_procedimento + "? Volta a valer a referência.")) return;
+  const { error } = await sb.from("medico_valores").delete().eq("id", p.personalizacao_id);
+  if (error) { toast("Não foi possível remover: " + error.message, true); return; }
+  toast("Valor removido — vale a referência.");
+  mvListar(); mvBuscar();
+}
+
+async function mvListar(){
+  const alvo = $("mv-lista");
+  const { data, error } = await sb.from("vw_meus_valores")
+    .select("*")
+    .not("valor_personalizado", "is", null)
+    .order("nome_procedimento");
+  if (error) { alvo.innerHTML = '<div class="vazio">Indisponível: ' + (error.message || "") + '</div>'; $("mv-conta").textContent = ""; return; }
+  $("mv-conta").textContent = data.length ? data.length + " personalizado(s)" : "";
+  if (!data.length) {
+    alvo.innerHTML = '<div class="vazio">Você ainda não personalizou nenhum valor. Busque um procedimento acima e defina o seu.</div>';
+    return;
+  }
+  alvo.innerHTML = "";
+  data.forEach(p => alvo.appendChild(mvLinhaHtml(p, true)));
+}
+
+/* ---------- ações ---------- */
+async function mudarStatus(cirurgia, novo, msgOk){
+  const { error } = await sb.from("cirurgias").update({ status: novo }).eq("id", cirurgia.id);
+  if (error) {
+    toast("Não foi possível atualizar: " + error.message, true);
+    return;
+  }
+  toast(msgOk);
+  carregarTudo();
+}
+</script>
+</body>
+</html>
