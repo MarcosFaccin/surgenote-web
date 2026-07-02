@@ -223,6 +223,25 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .st-cancelada{background:#ECEFED;color:var(--cinza)}
 .sel-status{font:inherit;font-size:.76rem;border:1px solid var(--linha);border-radius:6px;padding:4px 6px;background:var(--papel);color:var(--grafite)}
 
+/* modal de detalhe / linha do tempo */
+.modal-fundo{position:fixed;inset:0;background:rgba(8,18,24,.55);z-index:70;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--branco);border:1px solid var(--linha);border-radius:14px;max-width:520px;width:100%;max-height:88vh;display:flex;flex-direction:column}
+.modal-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:16px 18px;border-bottom:1px solid var(--linha)}
+.modal-cab h3{font-family:var(--display);font-size:1.02rem;color:var(--titulo)}
+.dt-sub{font-size:.78rem;color:var(--cinza)}
+.modal-fechar{background:none;border:none;font-size:1.1rem;color:var(--cinza);padding:2px 6px}
+.modal-corpo{padding:16px 18px;overflow-y:auto}
+.linha-tempo{position:relative;margin:0 0 18px;padding-left:22px}
+.linha-tempo::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--linha)}
+.lt-item{position:relative;padding:0 0 14px}
+.lt-item::before{content:"";position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--verde);border:2px solid var(--branco)}
+.lt-item.lt-alerta::before{background:var(--vermelho)}
+.lt-item.lt-dinheiro::before{background:#3FBF8F}
+.lt-item .lt-quando{font-size:.72rem;color:var(--cinza);font-family:var(--mono)}
+.lt-item .lt-oq{font-size:.9rem;font-weight:600}
+.lt-item .lt-extra{font-size:.8rem;color:var(--cinza)}
+.dt-pagamento{border-top:1px solid var(--linha);padding-top:14px}
+
 /* toast */
 #toasts{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:50}
 .toast{background:var(--verde-escuro);color:#fff;border-radius:8px;padding:11px 16px;font-size:.88rem;box-shadow:0 6px 18px rgba(8,58,51,.25)}
@@ -506,6 +525,30 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
   </main>
 </div>
 
+<div id="detalhe-fundo" class="modal-fundo" hidden>
+  <div class="modal" role="dialog" aria-label="Detalhes da cirurgia">
+    <div class="modal-cab">
+      <div>
+        <h3 id="dt-titulo">—</h3>
+        <span class="dt-sub" id="dt-sub"></span>
+      </div>
+      <button class="modal-fechar" id="dt-fechar" aria-label="Fechar">✕</button>
+    </div>
+    <div class="modal-corpo">
+      <div id="dt-linha-tempo" class="linha-tempo"></div>
+      <div class="dt-pagamento">
+        <span class="ap-rotulo">Registrar pagamento recebido</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="number" id="dt-pg-valor" class="sel-status" min="0" step="0.01" placeholder="R$ valor" style="flex:1;min-width:110px;padding:10px;font-size:16px">
+          <input type="date" id="dt-pg-data" class="sel-status" style="padding:10px;font-size:16px">
+          <button class="btn btn-confirmar" id="dt-pg-salvar">Registrar</button>
+        </div>
+        <p style="font-size:.72rem;color:var(--cinza);margin-top:8px">Se o total pago cobrir o previsto, a cirurgia é marcada como Paga automaticamente.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toasts" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.50.0/dist/umd/supabase.min.js" integrity="sha384-jP+y6mxch/vbLrNpx4basfv6ciZQuHwdRHgZGa6Mhja0Xm4p87ok2OQavTrRIGxH" crossorigin="anonymous"></script>
@@ -676,6 +719,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("ag-novo-btn").addEventListener("click", () => { $("ag-form").hidden = !$("ag-form").hidden; });
   $("ag-cancelar").addEventListener("click", () => { $("ag-form").hidden = true; });
   $("ag-salvar").addEventListener("click", agCriar);
+  $("dt-fechar").addEventListener("click", () => { $("detalhe-fundo").hidden = true; });
+  $("detalhe-fundo").addEventListener("click", (e) => { if (e.target.id === "detalhe-fundo") $("detalhe-fundo").hidden = true; });
+  $("dt-pg-salvar").addEventListener("click", dtRegistrarPagamento);
   $("ag-proc").addEventListener("input", () => {
     clearTimeout(agProcTimer);
     agProcTimer = setTimeout(agSugerirProcedimentos, 300);
@@ -932,9 +978,10 @@ function renderRecentes(linhas){
     const item = document.createElement("div");
     item.className = "recente";
     item.innerHTML =
-      '<div class="info"><div class="nome"></div><div class="sub"></div></div>' +
+      '<div class="info" style="cursor:pointer" title="Ver linha do tempo"><div class="nome"></div><div class="sub"></div></div>' +
       '<span class="badge"></span>' +
       '<select class="sel-status" aria-label="Mudar status"></select>';
+    item.querySelector(".info").addEventListener("click", () => abrirDetalhe(c.id));
     item.querySelector(".nome").textContent = c.nome_procedimento || "—";
     item.querySelector(".sub").textContent = (c.protocolo ? "Nº " + c.protocolo + " · " : "") + (c.convenio_ref || c.convenio_nome || "convênio n/d") + (c.hospital_ref || c.hospital_nome ? " · " + (c.hospital_ref || c.hospital_nome) : "") + " · " + fmtData(c.data_realizacao || c.data_cirurgia, false);
     const badge = item.querySelector(".badge");
@@ -1153,7 +1200,8 @@ async function carregarAgenda(){
     cirurgias.forEach(c => {
       const item = document.createElement("div");
       item.className = "recente";
-      item.innerHTML = '<div class="info"><div class="nome"></div><div class="sub"></div></div><span class="badge"></span>';
+      item.innerHTML = '<div class="info" style="cursor:pointer" title="Ver linha do tempo"><div class="nome"></div><div class="sub"></div></div><span class="badge"></span>';
+      item.querySelector(".info").addEventListener("click", () => abrirDetalhe(c.id));
       item.querySelector(".nome").textContent = fmtData(c.data_cirurgia, true) + " · " + (c.nome_procedimento || "—");
       item.querySelector(".sub").textContent = (c.paciente_nome || "paciente n/d") + (c.hospital_ref || c.hospital_nome ? " · " + (c.hospital_ref || c.hospital_nome) : "");
       const ev = evPorCirurgia[c.id];
@@ -1424,6 +1472,62 @@ async function mvListar(){
   }
   alvo.innerHTML = "";
   data.forEach(p => alvo.appendChild(mvLinhaHtml(p, true)));
+}
+
+/* ---------- detalhe da cirurgia (linha do tempo + pagamento) ---------- */
+let dtCirurgia = null;
+
+async function abrirDetalhe(cirurgiaId){
+  const { data: c } = await sb.from("vw_cirurgias_completa").select("*").eq("id", cirurgiaId).maybeSingle();
+  if (!c) { toast("Cirurgia não encontrada.", true); return; }
+  dtCirurgia = c;
+  const [pgs, gls] = await Promise.all([
+    sb.from("pagamentos").select("valor,data_pagamento,fonte,created_at").eq("cirurgia_id", c.id).order("data_pagamento"),
+    sb.from("glosas").select("valor_glosado,motivo,status,data_identificacao").eq("cirurgia_id", c.id)
+  ]);
+  $("dt-titulo").textContent = c.nome_procedimento || "Cirurgia";
+  $("dt-sub").textContent = "Nº " + (c.protocolo || "—") + " · " + (c.paciente_nome || "paciente n/d") +
+    " · " + (c.convenio_ref || c.convenio_nome || "sem convênio");
+
+  const eventos = [];
+  const dfmt = (d, hora) => d ? fmtData(d, hora) : null;
+  eventos.push({ q: dfmt(c.created_at, true), o: "Registrada", e: "via " + (String(c.protocolo||"").startsWith("AG-") ? "dashboard" : "WhatsApp") });
+  if (c.data_cirurgia) eventos.push({ q: dfmt(c.data_cirurgia, true), o: "Agendada/confirmada", e: c.hospital_ref || c.hospital_nome || "" });
+  if (c.data_realizacao) eventos.push({ q: dfmt(c.data_realizacao, false), o: "Realizada", e: "valor previsto " + brl.format(Number(c.valor_previsto||0)) });
+  if (c.faturada_em) eventos.push({ q: dfmt(c.faturada_em, false), o: "Faturada", e: "" });
+  (pgs.data || []).forEach(p => eventos.push({ q: dfmt(p.data_pagamento, false), o: "Pagamento recebido " + brl.format(Number(p.valor||0)), e: p.fonte || "", cls: "lt-dinheiro" }));
+  (gls.data || []).forEach(g => eventos.push({ q: dfmt(g.data_identificacao, false), o: "Glosa " + brl.format(Number(g.valor_glosado||0)) + " (" + g.status + ")", e: g.motivo || "", cls: "lt-alerta" }));
+  if (c.status === "cancelada") eventos.push({ q: dfmt(c.updated_at, true), o: "Cancelada", e: "", cls: "lt-alerta" });
+
+  const saldo = Math.max(0, Number(c.valor_previsto||0) - Number(c.total_pago||0));
+  eventos.push({ q: "hoje", o: "Status: " + (ROTULOS[c.status] || c.status), e: saldo > 0 ? "saldo em aberto " + brl.format(saldo) : "quitada", cls: saldo > 0 ? "lt-alerta" : "lt-dinheiro" });
+
+  $("dt-linha-tempo").innerHTML = eventos.map(ev =>
+    '<div class="lt-item ' + (ev.cls || "") + '"><div class="lt-quando">' + escHtml(ev.q || "—") + '</div><div class="lt-oq">' + escHtml(ev.o) + '</div>' + (ev.e ? '<div class="lt-extra">' + escHtml(ev.e) + '</div>' : "") + '</div>'
+  ).join("");
+  $("dt-pg-valor").value = saldo > 0 ? saldo.toFixed(2) : "";
+  $("dt-pg-data").value = new Date().toISOString().slice(0,10);
+  $("detalhe-fundo").hidden = false;
+}
+
+async function dtRegistrarPagamento(){
+  if (!dtCirurgia) return;
+  const valor = Number($("dt-pg-valor").value);
+  const data = $("dt-pg-data").value;
+  if (!valor || valor <= 0 || !data) { toast("Informe valor e data do pagamento.", true); return; }
+  const { error } = await sb.from("pagamentos").insert({
+    cirurgia_id: dtCirurgia.id, valor: valor, data_pagamento: data, fonte: "dashboard"
+  });
+  if (error) { toast("Não foi possível registrar: " + error.message, true); return; }
+  const totalPago = Number(dtCirurgia.total_pago || 0) + valor;
+  if (totalPago >= Number(dtCirurgia.valor_previsto || 0) - 0.009 && dtCirurgia.status !== "paga") {
+    await sb.from("cirurgias").update({ status: "paga" }).eq("id", dtCirurgia.id);
+    toast("Pagamento registrado — cirurgia quitada e marcada como Paga.");
+  } else {
+    toast("Pagamento de " + brl.format(valor) + " registrado.");
+  }
+  abrirDetalhe(dtCirurgia.id);
+  carregarTudo();
 }
 
 /* ---------- ações ---------- */
