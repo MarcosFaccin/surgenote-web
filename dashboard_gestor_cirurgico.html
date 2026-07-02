@@ -5,15 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gestão Cirúrgica — Painel do Gestor</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0E5A4E">
+<meta name="theme-color" content="#12384A">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Instrument+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
 :root{
-  /* --marca é a cor escolhida pelo médico; os tons derivam dela automaticamente */
-  --marca:#0E5A4E;
+  /* --marca é a cor escolhida pelo médico; os tons derivam dela automaticamente.
+     Padrão: azul-petróleo do SurgeNote original (App Store). */
+  --marca:#1D5468;
   --verde:var(--marca);
   --verde-escuro:color-mix(in srgb, var(--marca) 72%, #04140F);
   --verde-tinta:color-mix(in srgb, var(--marca) 14%, #FFFFFF);
@@ -24,13 +25,17 @@
   --raio:10px;
   --display:"Bricolage Grotesque",sans-serif; --corpo:"Instrument Sans",sans-serif; --mono:"Spline Sans Mono",monospace;
 }
-/* modo escuro: o mesmo consultório com a luz apagada — tons de verde-carvão, não preto genérico */
+/* modo escuro no espírito do SurgeNote original: superfícies tingidas pela
+   cor da marca (navy/petróleo por padrão), não preto genérico */
 html[data-tema="escuro"]{
-  --papel:#0D1512; --branco:#14201B; --grafite:#E8EFEA; --cinza:#9DB0A7; --linha:#24322B;
-  --verde-tinta:color-mix(in srgb, var(--marca) 24%, #0D1512);
-  --titulo:color-mix(in srgb, var(--marca) 40%, #E8EFEA);
+  --papel:color-mix(in srgb, var(--marca) 14%, #090D10);
+  --branco:color-mix(in srgb, var(--marca) 20%, #0C1216);
+  --grafite:#E9EEF1; --cinza:color-mix(in srgb, var(--marca) 24%, #98A6AD);
+  --linha:color-mix(in srgb, var(--marca) 26%, #1B2429);
+  --verde-tinta:color-mix(in srgb, var(--marca) 30%, #0C1216);
+  --titulo:color-mix(in srgb, var(--marca) 34%, #EAF1F5);
   --ambar-tinta:#2E2410; --vermelho-tinta:#301A15; --petroleo-tinta:#11242C;
-  --ambar:#D9A03F; --vermelho:#D96A5A; --petroleo:#5FA2BD;
+  --ambar:#D9A03F; --vermelho:#E4604E; --petroleo:#5FA2BD;
 }
 html[data-tema="escuro"] .campo input, html[data-tema="escuro"] .sel-status{color-scheme:dark}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -77,6 +82,24 @@ header.topo{background:var(--verde-escuro);color:#fff;padding:14px 28px;display:
 .btn-sair:hover{background:rgba(255,255,255,.12)}
 
 main{max-width:1240px;margin:0 auto;padding:26px 28px 60px}
+
+/* ---------- herói "últimos 30 dias" (DNA do SurgeNote 1.0) ---------- */
+.hero30{margin-bottom:22px;background:var(--verde-escuro);border:none;overflow:hidden}
+.hero30-topo{display:flex;align-items:baseline;gap:10px;padding:16px 20px 6px}
+.hero30-topo h2{font-family:var(--display);font-size:1rem;font-weight:700;color:#fff}
+.hero30-topo .conta{color:rgba(255,255,255,.55)}
+.grafico30{padding:4px 8px 0}
+.grafico30 svg{display:block;width:100%;height:120px}
+.pago-aberto{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(255,255,255,.12)}
+.pa{display:flex;flex-direction:column;align-items:center;padding:13px 8px 12px;position:relative}
+.pa::before{content:"";position:absolute;left:14px;top:14px;bottom:14px;width:4px;border-radius:2px}
+.pa-pago::before{background:#3FBF8F}
+.pa-aberto::before{background:#E4604E}
+.pa + .pa{border-left:1px solid rgba(255,255,255,.12)}
+.pa-valor{font-family:var(--display);font-weight:700;font-size:1.35rem;color:#fff;font-variant-numeric:tabular-nums}
+.pa-rotulo{font-size:.7rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+.pa-pago .pa-rotulo{color:#3FBF8F}
+.pa-aberto .pa-rotulo{color:#E4604E}
 
 /* ---------- navegação por visões ---------- */
 .view{display:none}
@@ -250,8 +273,8 @@ main{max-width:1240px;margin:0 auto;padding:26px 28px 60px}
     <div class="ap-grupo">
       <span class="ap-rotulo">Cor da marca</span>
       <div class="ap-cores">
-        <button class="ap-cor" data-cor="#0E5A4E" style="background:#0E5A4E" title="Verde cirúrgico"></button>
-        <button class="ap-cor" data-cor="#225E75" style="background:#225E75" title="Petróleo"></button>
+        <button class="ap-cor" data-cor="#1D5468" style="background:#1D5468" title="Petróleo SurgeNote (original)"></button>
+        <button class="ap-cor" data-cor="#12384A" style="background:#12384A" title="Verde cirúrgico"></button>
         <button class="ap-cor" data-cor="#6B2D40" style="background:#6B2D40" title="Vinho"></button>
         <button class="ap-cor" data-cor="#8A5A12" style="background:#8A5A12" title="Âmbar"></button>
         <button class="ap-cor" data-cor="#1F3F8F" style="background:#1F3F8F" title="Azul profundo"></button>
@@ -292,6 +315,18 @@ main{max-width:1240px;margin:0 auto;padding:26px 28px 60px}
     <div class="faixa-erro" id="faixa-erro" hidden></div>
 
     <div class="view ativa" data-view="inicio">
+    <section class="painel hero30" aria-label="Últimos 30 dias">
+      <div class="hero30-topo">
+        <h2>Últimos 30 dias</h2>
+        <span class="conta" id="h30-conta"></span>
+      </div>
+      <div id="grafico30" class="grafico30"></div>
+      <div class="pago-aberto">
+        <div class="pa pa-pago"><span class="pa-valor" id="h30-pago">–</span><span class="pa-rotulo">Pago</span></div>
+        <div class="pa pa-aberto"><span class="pa-valor" id="h30-aberto">–</span><span class="pa-rotulo">Aberto</span></div>
+      </div>
+    </section>
+
     <section class="kpis" aria-label="Indicadores do mês">
       <div class="kpi atencao"><div class="rotulo">Aguardando confirmação</div><div class="valor" id="kpi-fila">–</div><div class="sub">solicitações na fila</div></div>
       <div class="kpi"><div class="rotulo">Cirurgias no mês</div><div class="valor" id="kpi-mes">–</div><div class="sub" id="kpi-mes-sub">registradas em <span id="mes-nome"></span></div></div>
@@ -467,7 +502,7 @@ function inicioMes(){
 }
 
 /* ---------- aparência (tema, cor da marca, logo) ---------- */
-let prefAparencia = { tema: "sistema", cor_primaria: "#0E5A4E", logo_data: null };
+let prefAparencia = { tema: "sistema", cor_primaria: "#1D5468", logo_data: null };
 const midiaEscuro = window.matchMedia("(prefers-color-scheme: dark)");
 
 function aplicarAparencia(){
@@ -655,6 +690,7 @@ async function carregarTudo(){
   carregarAgenda();
   carregarRadar();
   carregarComparador();
+  carregarGrafico30();
   mvListar();
 }
 
@@ -1062,6 +1098,53 @@ async function carregarAgenda(){
     });
   } catch (e) {
     alvo.innerHTML = '<div class="vazio">Agenda indisponível: ' + (e.message || e) + '</div>';
+  }
+}
+
+/* ---------- herói: gráfico dos últimos 30 dias ---------- */
+async function carregarGrafico30(){
+  const alvo = $("grafico30");
+  try {
+    const ini = new Date(); ini.setDate(ini.getDate() - 29); ini.setHours(0,0,0,0);
+    const iniISO = ini.toISOString();
+    const [cir, pg] = await Promise.all([
+      sb.from("cirurgias").select("valor_previsto,created_at,status").gte("created_at", iniISO).neq("status","cancelada"),
+      sb.from("pagamentos").select("valor,data_pagamento").gte("data_pagamento", iniISO.slice(0,10))
+    ]);
+    const porDia = new Array(30).fill(0);
+    (cir.data || []).forEach(c => {
+      const d = Math.floor((new Date(c.created_at) - ini) / 86400000);
+      if (d >= 0 && d < 30) porDia[d] += Number(c.valor_previsto || 0);
+    });
+    const totalPrevisto = porDia.reduce((s,v) => s + v, 0);
+    const pago = (pg.data || []).reduce((s,p) => s + Number(p.valor || 0), 0);
+    const aberto = Math.max(0, totalPrevisto - pago);
+    $("h30-pago").textContent = brl.format(pago);
+    $("h30-aberto").textContent = brl.format(aberto);
+    $("h30-conta").textContent = (cir.data || []).length ? (cir.data.length + " cirurgia(s)") : "";
+
+    // gráfico de linha SVG, no espírito do app original
+    const W = 600, H = 120, PAD = 8;
+    const max = Math.max(1, ...porDia);
+    const x = i => PAD + i * ((W - 2*PAD) / 29);
+    const y = v => H - PAD - (v / max) * (H - 2*PAD - 14);
+    let linha = "", area = `M ${x(0)} ${H-PAD}`;
+    porDia.forEach((v, i) => {
+      linha += (i ? " L " : "M ") + x(i).toFixed(1) + " " + y(v).toFixed(1);
+      area  += ` L ${x(i).toFixed(1)} ${y(v).toFixed(1)}`;
+    });
+    area += ` L ${x(29)} ${H-PAD} Z`;
+    const fmtDia = d => String(d.getDate()).padStart(2,"0") + "/" + String(d.getMonth()+1).padStart(2,"0");
+    const fim = new Date();
+    alvo.innerHTML =
+      `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Valores registrados por dia nos últimos 30 dias">
+        <path d="${area}" fill="rgba(255,255,255,.08)"/>
+        <path d="${linha}" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        <text x="${PAD}" y="${H-1}" fill="rgba(255,255,255,.45)" font-size="10">${fmtDia(ini)}</text>
+        <text x="${W-PAD}" y="${H-1}" fill="rgba(255,255,255,.45)" font-size="10" text-anchor="end">${fmtDia(fim)}</text>
+      </svg>`;
+  } catch (e) {
+    alvo.innerHTML = "";
   }
 }
 
