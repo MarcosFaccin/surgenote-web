@@ -1,6 +1,6 @@
 // Service worker do SurgeNote — rede primeiro (dados sempre frescos),
 // cache como reserva para abrir mesmo sem internet.
-const CACHE = "surgenote-v6";
+const CACHE = "surgenote-v7";
 const BASICO = ["dashboard_gestor_cirurgico.html", "index.html", "manifest.webmanifest", "icon-192.png"];
 
 self.addEventListener("install", (e) => {

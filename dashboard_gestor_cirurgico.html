@@ -270,7 +270,8 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
   header.topo{padding:10px 10px;gap:7px;flex-wrap:nowrap}
   .marca{font-size:.94rem;min-width:0;flex:1}
   .marca #titulo-app{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .marca small{font-size:.6rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .marca small{font-size:.6rem;white-space:nowrap}
+  .so-desktop{display:none}
   .aovivo{display:none}
   .usuario{display:none}
   .logo-medico{height:26px;max-width:70px}
@@ -298,9 +299,11 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
   .vazio{padding:18px 12px;font-size:.86rem}
   .painel-cab h2{font-size:.95rem;min-width:0}
   .painel-cab{flex-wrap:wrap;gap:4px 10px}
-  table{font-size:.82rem;min-width:420px}
+  table{font-size:.79rem;min-width:0;width:100%}
   thead th.hide-sm,tbody td.hide-sm{display:none}
-  thead th,tbody td{padding:9px 10px}
+  thead th,tbody td{padding:8px 7px;word-break:break-word}
+  thead th.num,tbody td.num{white-space:nowrap}
+  .med-name{word-break:break-word}
   /* inputs com 16px evitam o zoom automático do iPhone */
   .campo input,.sel-status,.ap-nome{font-size:16px}
   .campo input{padding:10px 11px}
@@ -352,7 +355,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 <div id="view-app" hidden>
   <header class="topo">
     <img id="logo-medico" class="logo-medico" alt="" hidden>
-    <div class="marca"><span id="titulo-app">Gestão Cirúrgica</span><small>por <b>SurgeNote</b> · iddeia</small></div>
+    <div class="marca"><span id="titulo-app">Gestão Cirúrgica</span><small>por <b>SurgeNote</b><span class="so-desktop"> · iddeia</span></small></div>
     <div class="aovivo" id="aovivo"><span class="ponto"></span><span id="aovivo-txt">conectando…</span></div>
     <div class="espaco"></div>
     <span class="sn-selo" title="SurgeNote — iddeia"><img src="icon-192.png" alt="SurgeNote">SurgeNote</span>
