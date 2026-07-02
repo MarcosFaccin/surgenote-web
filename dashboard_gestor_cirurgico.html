@@ -309,6 +309,14 @@ main{max-width:1240px;margin:0 auto;padding:26px 28px 60px}
       </aside>
     </div>
 
+    <section class="painel" aria-label="Radar financeiro" style="margin-top:22px">
+      <div class="painel-cab">
+        <h2>Radar financeiro — quem te deve</h2>
+        <span class="conta" id="rf-conta"></span>
+      </div>
+      <div class="painel-corpo" id="radar"></div>
+    </section>
+
     <section class="painel" aria-label="Minha tabela de valores" style="margin-top:22px">
       <div class="painel-cab">
         <h2>Minha tabela de valores</h2>
@@ -558,6 +566,7 @@ async function carregarTudo(){
   carregarFinanceiro();
   carregarConciliacao();
   carregarAgenda();
+  carregarRadar();
   mvListar();
 }
 
@@ -965,6 +974,81 @@ async function carregarAgenda(){
     });
   } catch (e) {
     alvo.innerHTML = '<div class="vazio">Agenda indisponível: ' + (e.message || e) + '</div>';
+  }
+}
+
+/* ---------- radar financeiro (ROI do médico) ---------- */
+async function carregarRadar(){
+  const alvo = $("radar");
+  try {
+    const { data, error } = await sb.from("vw_cirurgias_completa")
+      .select("id,nome_procedimento,paciente_nome,convenio_ref,convenio_nome,status,valor_previsto,total_pago,total_glosado_aberto,data_realizacao,faturada_em,created_at")
+      .in("status", ["realizada","faturada","paga","glosada"]);
+    if (error) throw error;
+    const hoje = new Date();
+    const dias = (d) => d ? Math.floor((hoje - new Date(d)) / 86400000) : null;
+
+    // "a receber" = realizada/faturada/glosada com saldo (previsto - pago - glosa aberta) > 0
+    const abertas = [];
+    let totReceber = 0, totAtrasado = 0, qtdAtrasadas = 0, totGlosado = 0, recebido30 = 0;
+    (data || []).forEach(c => {
+      const previsto = Number(c.valor_previsto || 0);
+      const pago = Number(c.total_pago || 0);
+      const glosado = Number(c.total_glosado_aberto || 0);
+      totGlosado += glosado;
+      const saldo = previsto - pago;
+      const ref = c.faturada_em || c.data_realizacao || c.created_at;
+      const idade = dias(ref);
+      if (c.status !== "paga" && saldo > 0.009) {
+        abertas.push({ ...c, saldo, idade });
+        totReceber += saldo;
+        if (idade !== null && idade > 30) { totAtrasado += saldo; qtdAtrasadas++; }
+      }
+    });
+
+    $("rf-conta").textContent = abertas.length ? abertas.length + " em aberto" : "";
+    if (!abertas.length && totGlosado === 0) {
+      alvo.innerHTML = '<div class="vazio">Nada em aberto: tudo o que foi realizado está pago. 🎉</div>';
+      return;
+    }
+
+    // agrupa por convênio
+    const porConv = {};
+    abertas.forEach(c => {
+      const k = c.convenio_ref || c.convenio_nome || "Sem convênio";
+      if (!porConv[k]) porConv[k] = { qtd: 0, valor: 0, maisAntiga: 0 };
+      porConv[k].qtd++;
+      porConv[k].valor += c.saldo;
+      if ((c.idade || 0) > porConv[k].maisAntiga) porConv[k].maisAntiga = c.idade || 0;
+    });
+
+    let html = `
+      <div class="kpis" style="margin-bottom:18px">
+        <div class="kpi"><div class="rotulo">A receber</div><div class="valor">${brl.format(totReceber)}</div><div class="sub">${abertas.length} cirurgia(s) com saldo</div></div>
+        <div class="kpi ${qtdAtrasadas ? "alerta" : ""}"><div class="rotulo">Atrasado (+30 dias)</div><div class="valor">${brl.format(totAtrasado)}</div><div class="sub">${qtdAtrasadas} cirurgia(s)</div></div>
+        <div class="kpi ${totGlosado > 0 ? "atencao" : ""}"><div class="rotulo">Glosado em aberto</div><div class="valor">${brl.format(totGlosado)}</div><div class="sub">a recorrer</div></div>
+      </div>`;
+
+    const convs = Object.keys(porConv).sort((a, b) => porConv[b].valor - porConv[a].valor);
+    if (convs.length) {
+      html += '<div class="section-title" style="font-size:.85rem;color:var(--cinza);font-weight:600;margin-bottom:8px">Por convênio</div><table><thead><tr><th>Convênio</th><th class="num">Cirurgias</th><th class="num">Valor em aberto</th><th class="num hide-sm">Mais antiga</th></tr></thead><tbody>';
+      convs.forEach(k => {
+        const v = porConv[k];
+        html += `<tr><td class="med-name">${escHtml(k)}</td><td class="num">${v.qtd}</td><td class="num">${brl.format(v.valor)}</td><td class="num hide-sm">${v.maisAntiga} dia${v.maisAntiga === 1 ? "" : "s"}</td></tr>`;
+      });
+      html += "</tbody></table>";
+    }
+
+    const prioridade = abertas.filter(c => (c.idade || 0) > 30).sort((a, b) => (b.idade || 0) - (a.idade || 0)).slice(0, 5);
+    if (prioridade.length) {
+      html += '<div class="section-title" style="font-size:.85rem;color:var(--cinza);font-weight:600;margin:16px 0 4px">Cobranças prioritárias</div>';
+      prioridade.forEach(c => {
+        html += `<div class="recente"><div class="info"><div class="nome">${escHtml(c.nome_procedimento || "—")} · ${brl.format(c.saldo)}</div><div class="sub">${escHtml(c.paciente_nome || "paciente n/d")} · ${escHtml(c.convenio_ref || c.convenio_nome || "—")} · há ${c.idade} dias</div></div><span class="badge st-glosada">${c.idade}d</span></div>`;
+      });
+    }
+    alvo.innerHTML = html;
+  } catch (e) {
+    alvo.innerHTML = '<div class="vazio">Radar indisponível: ' + (e.message || e) + '</div>';
   }
 }
 
