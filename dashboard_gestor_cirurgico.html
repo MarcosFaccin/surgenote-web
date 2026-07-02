@@ -486,14 +486,19 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
           <div class="painel-cab"><h2>Relatório hospital/convênio</h2></div>
           <div class="painel-corpo">
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
-              <label class="campo" style="margin:0"><span>Mês de referência</span><input type="month" id="rel-mes"></label>
+              <label class="campo" style="margin:0"><span>De *</span><input type="date" id="rel-ini"></label>
+              <label class="campo" style="margin:0"><span>Até *</span><input type="date" id="rel-fim"></label>
+              <label class="campo" style="margin:0"><span>Pagamento</span><select id="rel-pagamento" class="sel-status" style="width:100%;padding:11px 9px;font-size:.88rem"><option value="">Todas</option><option value="aberto">Em aberto</option><option value="pagas">Pagas</option></select></label>
+              <label class="campo" style="margin:0"><span>Situação</span><select id="rel-status" class="sel-status" style="width:100%;padding:11px 9px;font-size:.88rem"><option value="">Todas</option></select></label>
               <label class="campo" style="margin:0"><span>Convênio</span><select id="rel-convenio" class="sel-status" style="width:100%;padding:11px 9px;font-size:.88rem"><option value="">Todos</option></select></label>
               <label class="campo" style="margin:0"><span>Hospital</span><select id="rel-hospital" class="sel-status" style="width:100%;padding:11px 9px;font-size:.88rem"><option value="">Todos</option></select></label>
             </div>
             <div class="acoes" style="margin-top:14px">
-              <button class="btn btn-confirmar" id="btn-rel-pdf">Imprimir / PDF</button>
+              <button class="btn btn-confirmar" id="btn-rel-tela">Conferir na tela</button>
+              <button class="btn btn-recusar" id="btn-rel-pdf" style="color:var(--verde);border-color:var(--verde)">Imprimir / PDF</button>
               <button class="btn btn-recusar" id="btn-rel-csv" style="color:var(--verde);border-color:var(--verde)">Planilha (CSV)</button>
             </div>
+            <div id="rel-resultados" style="margin-top:6px"></div>
             <p style="font-size:.76rem;color:var(--cinza);margin-top:10px">⚠️ O relatório contém dados de pacientes. Envie somente ao hospital/convênio responsável pelo atendimento (LGPD).</p>
           </div>
         </section>
@@ -715,7 +720,15 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("btn-rel-pdf").addEventListener("click", gerarRelatorioPDF);
   $("btn-rel-csv").addEventListener("click", gerarRelatorioCSV);
   const hoje = new Date();
-  $("rel-mes").value = hoje.getFullYear() + "-" + String(hoje.getMonth() + 1).padStart(2, "0");
+  const atras = new Date(); atras.setDate(atras.getDate() - 120);
+  $("rel-fim").value = hoje.toISOString().slice(0, 10);
+  $("rel-ini").value = atras.toISOString().slice(0, 10);
+  ORDEM_STATUS.filter(st => st !== "cancelada").forEach(st => {
+    const op = document.createElement("option");
+    op.value = st; op.textContent = ROTULOS[st];
+    $("rel-status").appendChild(op);
+  });
+  $("btn-rel-tela").addEventListener("click", relConferir);
   $("ag-novo-btn").addEventListener("click", () => { $("ag-form").hidden = !$("ag-form").hidden; });
   $("ag-cancelar").addEventListener("click", () => { $("ag-form").hidden = true; });
   $("ag-salvar").addEventListener("click", agCriar);
@@ -1006,21 +1019,80 @@ function escHtml(s){
 function dataRef(c){ return c.data_realizacao || (c.data_cirurgia ? String(c.data_cirurgia).slice(0,10) : null) || (c.created_at ? String(c.created_at).slice(0,10) : null); }
 
 async function buscarLinhasRelatorio(){
-  const mes = $("rel-mes").value; // "2026-06"
-  if (!mes) { toast("Escolha o mês de referência.", true); return null; }
+  const ini = $("rel-ini").value, fim = $("rel-fim").value;
+  if (!ini || !fim) { toast("Informe o período (De / Até).", true); return null; }
+  if (fim < ini) { toast("A data final é anterior à inicial.", true); return null; }
   const { data, error } = await sb.from("vw_cirurgias_completa").select("*").neq("status","cancelada").order("data_realizacao", { ascending: true });
   if (error) { toast("Erro ao buscar cirurgias: " + error.message, true); return null; }
-  const conv = $("rel-convenio").value;
-  const hosp = $("rel-hospital").value;
+  const conv = $("rel-convenio").value, hosp = $("rel-hospital").value;
+  const pg = $("rel-pagamento").value, st = $("rel-status").value;
   const linhas = (data || []).filter(c => {
     const d = dataRef(c);
-    if (!d || !d.startsWith(mes)) return false;
+    if (!d || d < ini || d > fim) return false;
     if (conv && (c.convenio_ref || c.convenio_nome || "") !== conv) return false;
     if (hosp && (c.hospital_ref || c.hospital_nome || "") !== hosp) return false;
+    if (st && c.status !== st) return false;
+    const saldo = Number(c.valor_previsto || 0) - Number(c.total_pago || 0);
+    if (pg === "aberto" && !(saldo > 0.009 && c.status !== "paga")) return false;
+    if (pg === "pagas" && !(c.status === "paga" || saldo <= 0.009)) return false;
     return true;
   });
   if (!linhas.length) { toast("Nenhuma cirurgia no período/filtros escolhidos.", true); return null; }
   return linhas;
+}
+
+function relPeriodoTxt(){
+  const br = d => d.split("-").reverse().join("/");
+  return br($("rel-ini").value) + " a " + br($("rel-fim").value);
+}
+
+/* modo conferência: lista na tela com "✓ Recebi" por linha */
+async function relConferir(){
+  const alvo = $("rel-resultados");
+  const linhas = await buscarLinhasRelatorio();
+  if (!linhas) { alvo.innerHTML = ""; return; }
+  alvo.innerHTML = "";
+  let totalAberto = 0;
+  linhas.forEach(c => {
+    const saldo = Math.max(0, Number(c.valor_previsto || 0) - Number(c.total_pago || 0));
+    totalAberto += saldo;
+    const item = document.createElement("div");
+    item.className = "recente";
+    item.innerHTML = '<div class="info" style="cursor:pointer"><div class="nome"></div><div class="sub"></div></div><span class="badge"></span>' +
+      (saldo > 0.009 ? '<button class="btn btn-confirmar rc-pagar" style="padding:6px 12px;font-size:.8rem"></button>' : '');
+    const d = (dataRef(c) || "").split("-").reverse().slice(0, 2).join("/");
+    item.querySelector(".nome").textContent = d + " · " + (c.nome_procedimento || "—") + " · " + (c.paciente_nome || "—");
+    item.querySelector(".sub").textContent = (c.convenio_ref || c.convenio_nome || "—") +
+      (c.hospital_ref || c.hospital_nome ? " · " + (c.hospital_ref || c.hospital_nome) : "") +
+      " · previsto " + brl.format(Number(c.valor_previsto || 0)) +
+      (saldo > 0.009 ? " · em aberto " + brl.format(saldo) : "");
+    item.querySelector(".info").addEventListener("click", () => abrirDetalhe(c.id));
+    const badge = item.querySelector(".badge");
+    badge.textContent = ROTULOS[c.status] || c.status;
+    badge.classList.add("st-" + c.status);
+    const btn = item.querySelector(".rc-pagar");
+    if (btn) {
+      btn.textContent = "✓ Recebi " + brl.format(saldo);
+      btn.addEventListener("click", () => relMarcarPago(c, saldo, btn));
+    }
+    alvo.appendChild(item);
+  });
+  const rodape = document.createElement("p");
+  rodape.style.cssText = "font-size:.82rem;color:var(--cinza);margin-top:10px";
+  rodape.textContent = linhas.length + " cirurgia(s) · " + relPeriodoTxt() + " · total em aberto: " + brl.format(totalAberto);
+  alvo.appendChild(rodape);
+}
+
+async function relMarcarPago(c, saldo, btn){
+  btn.disabled = true; btn.textContent = "Registrando…";
+  const { error } = await sb.from("pagamentos").insert({
+    cirurgia_id: c.id, valor: saldo, data_pagamento: new Date().toISOString().slice(0, 10), fonte: "conferencia"
+  });
+  if (error) { toast("Não foi possível registrar: " + error.message, true); btn.disabled = false; btn.textContent = "✓ Recebi " + brl.format(saldo); return; }
+  await sb.from("cirurgias").update({ status: "paga" }).eq("id", c.id);
+  toast("Recebimento de " + brl.format(saldo) + " registrado — marcada como Paga.");
+  relConferir();
+  carregarTudo();
 }
 
 function popularFiltrosRelatorio(cirurgias){
@@ -1042,38 +1114,38 @@ function popularFiltrosRelatorio(cirurgias){
 async function gerarRelatorioPDF(){
   const linhas = await buscarLinhasRelatorio();
   if (!linhas) return;
-  const mes = $("rel-mes").value;
-  const [ano, m] = mes.split("-");
-  const mesNome = new Date(Number(ano), Number(m)-1, 1).toLocaleString("pt-BR", { month: "long", year: "numeric" });
   const medico = linhas[0].medico_ref || "";
   const totPrev = linhas.reduce((s,c) => s + Number(c.valor_previsto || 0), 0);
   const totPago = linhas.reduce((s,c) => s + Number(c.total_pago || c.valor_pago || 0), 0);
   const filtros = [];
+  if ($("rel-pagamento").value) filtros.push("Pagamento: " + $("rel-pagamento").options[$("rel-pagamento").selectedIndex].text);
+  if ($("rel-status").value) filtros.push("Situação: " + (ROTULOS[$("rel-status").value] || $("rel-status").value));
   if ($("rel-convenio").value) filtros.push("Convênio: " + $("rel-convenio").value);
   if ($("rel-hospital").value) filtros.push("Hospital: " + $("rel-hospital").value);
 
   let corpo = "";
   linhas.forEach(c => {
+    const saldo = Math.max(0, Number(c.valor_previsto || 0) - Number(c.total_pago || 0));
     corpo += "<tr>" +
       "<td>" + escHtml(c.protocolo || "—") + "</td>" +
       "<td>" + escHtml(dataRef(c) ? dataRef(c).split("-").reverse().join("/") : "—") + "</td>" +
       "<td>" + escHtml(c.paciente_nome || "—") + (c.carteirinha ? "<br><small>cart. " + escHtml(c.carteirinha) + "</small>" : "") + "</td>" +
       "<td>" + escHtml(c.nome_procedimento || "—") + "</td>" +
-      "<td>" + escHtml(c.hospital_ref || c.hospital_nome || "—") + "</td>" +
       "<td>" + escHtml(c.convenio_ref || c.convenio_nome || "—") + "</td>" +
       "<td>" + escHtml(ROTULOS[c.status] || c.status) + "</td>" +
       '<td style="text-align:right">' + brl.format(Number(c.valor_previsto || 0)) + "</td>" +
+      '<td style="text-align:right">' + (saldo > 0.009 ? brl.format(saldo) : "—") + "</td>" +
     "</tr>";
   });
 
   const html = "<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>" +
-    "<title>Relatório de cirurgias — " + escHtml(mesNome) + "</title>" +
+    "<title>Relatório de cirurgias — " + escHtml(relPeriodoTxt()) + "</title>" +
     "<style>" +
     "body{font-family:Arial,Helvetica,sans-serif;color:#1C2421;margin:36px;font-size:13px}" +
     "h1{font-size:19px;margin:0 0 2px}" +
     ".sub{color:#5C6662;font-size:12px;margin-bottom:4px}" +
-    "table{width:100%;min-width:480px;border-collapse:collapse;margin-top:16px}" +
-    "th{background:#DDEEE9;color:#083A33;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border:1px solid #b9d2cb}" +
+    "table{width:100%;border-collapse:collapse;margin-top:16px}" +
+    "th{background:#DCE8ED;color:#123647;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;border:1px solid #b7ccd6}" +
     "td{padding:7px 8px;border:1px solid #DCE3DF;vertical-align:top}" +
     "td small{color:#5C6662}" +
     "tfoot td{font-weight:bold;background:#F4F6F3}" +
@@ -1082,21 +1154,19 @@ async function gerarRelatorioPDF(){
     "@media print{.no-print{display:none}}" +
     "</style></head><body>" +
     "<button class='no-print' onclick='window.print()' style='padding:9px 16px;margin-bottom:18px;cursor:pointer'>Imprimir / salvar como PDF</button>" +
-    "<h1>Relatório de cirurgias — " + escHtml(mesNome) + "</h1>" +
+    "<h1>Relatório de cirurgias — " + escHtml(relPeriodoTxt()) + "</h1>" +
     "<div class='sub'>" + escHtml(medico) + "</div>" +
     (filtros.length ? "<div class='sub'>" + escHtml(filtros.join(" · ")) + "</div>" : "") +
     "<div class='sub'>Emitido em " + new Date().toLocaleString("pt-BR") + " · " + linhas.length + " cirurgia(s)</div>" +
-    "<table><thead><tr><th>Protocolo</th><th>Data</th><th>Paciente</th><th>Procedimento</th><th>Hospital</th><th>Convênio</th><th>Status</th><th style='text-align:right'>Valor ref.</th></tr></thead>" +
+    "<table><thead><tr><th>Protocolo</th><th>Data</th><th>Paciente</th><th>Procedimento</th><th>Convênio</th><th>Status</th><th style='text-align:right'>Previsto</th><th style='text-align:right'>Em aberto</th></tr></thead>" +
     "<tbody>" + corpo + "</tbody>" +
-    "<tfoot><tr><td colspan='7'>Total previsto (referência CBHPM/tabela vigente)</td><td style='text-align:right'>" + brl.format(totPrev) + "</td></tr>" +
-    (totPago > 0 ? "<tr><td colspan='7'>Total já recebido</td><td style='text-align:right'>" + brl.format(totPago) + "</td></tr>" : "") +
-    "</tfoot></table>" +
-    "<div class='rodape'>Documento gerado pelo médico responsável no sistema de gestão cirúrgica. Contém dados pessoais de pacientes (LGPD) — uso restrito ao destinatário. Valores de honorário são de REFERÊNCIA e não substituem o faturamento oficial.</div>" +
+    "<tfoot><tr><td colspan='6'>Total previsto</td><td style='text-align:right'>" + brl.format(totPrev) + "</td><td style='text-align:right'>" + brl.format(Math.max(0, totPrev - totPago)) + "</td></tr></tfoot></table>" +
+    "<div class='rodape'>Documento gerado pelo médico responsável no SurgeNote (iddeia). Contém dados pessoais de pacientes (LGPD) — uso restrito ao destinatário. Valores de honorário são de REFERÊNCIA e não substituem o faturamento oficial.</div>" +
     "<div class='assinatura'>" + escHtml(medico) + "</div>" +
     "</body></html>";
 
   const win = window.open("", "_blank");
-  if (!win) { toast("O navegador bloqueou a janela. Libere pop-ups para este arquivo.", true); return; }
+  if (!win) { toast("O navegador bloqueou a janela. Libere pop-ups para este site.", true); return; }
   win.document.write(html);
   win.document.close();
 }
@@ -1104,20 +1174,24 @@ async function gerarRelatorioPDF(){
 async function gerarRelatorioCSV(){
   const linhas = await buscarLinhasRelatorio();
   if (!linhas) return;
-  const cab = ["protocolo","data","paciente","carteirinha","procedimento","hospital","convenio","status","valor_previsto","valor_recebido"];
+  const cab = ["protocolo","data","paciente","carteirinha","procedimento","hospital","convenio","status","valor_previsto","valor_recebido","em_aberto"];
   const csvCel = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
-  const corpo = linhas.map(c => [
-    c.protocolo, dataRef(c), c.paciente_nome, c.carteirinha, c.nome_procedimento,
-    c.hospital_ref || c.hospital_nome, c.convenio_ref || c.convenio_nome,
-    ROTULOS[c.status] || c.status,
-    String(Number(c.valor_previsto || 0)).replace(".", ","),
-    String(Number(c.total_pago || c.valor_pago || 0)).replace(".", ",")
-  ].map(csvCel).join(";"));
-  const csv = "﻿" + cab.join(";") + "\n" + corpo.join("\n");
+  const corpo = linhas.map(c => {
+    const saldo = Math.max(0, Number(c.valor_previsto || 0) - Number(c.total_pago || 0));
+    return [
+      c.protocolo, dataRef(c), c.paciente_nome, c.carteirinha, c.nome_procedimento,
+      c.hospital_ref || c.hospital_nome, c.convenio_ref || c.convenio_nome,
+      ROTULOS[c.status] || c.status,
+      String(Number(c.valor_previsto || 0)).replace(".", ","),
+      String(Number(c.total_pago || c.valor_pago || 0)).replace(".", ","),
+      String(saldo).replace(".", ",")
+    ].map(csvCel).join(";");
+  });
+  const csv = "\ufeff" + cab.join(";") + "\n" + corpo.join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "relatorio_cirurgias_" + $("rel-mes").value + ".csv";
+  a.download = "relatorio_cirurgias_" + $("rel-ini").value + "_a_" + $("rel-fim").value + ".csv";
   a.click();
   URL.revokeObjectURL(a.href);
   toast("Planilha gerada.");
