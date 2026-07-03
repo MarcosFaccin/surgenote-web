@@ -662,14 +662,6 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
               <button id="cal-hoje">Hoje</button>
               <button id="cal-prox" title="Próximo">›</button>
             </div>
-          </div>
-          <div class="painel-corpo" id="cal-corpo"></div>
-        </section>
-
-        <section class="painel" aria-label="Agenda de cirurgias">
-          <div class="painel-cab">
-            <h2>Agenda</h2>
-            <span class="conta" id="ag-conta"></span>
             <button class="recarregar" id="ag-novo-btn">+ Novo agendamento</button>
           </div>
           <div class="painel-corpo" id="ag-form" hidden style="border-bottom:1px solid var(--linha)">
@@ -684,6 +676,14 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
               <button class="btn btn-recusar" id="ag-cancelar">Fechar</button>
             </div>
             <p style="font-size:.76rem;color:var(--cinza);margin-top:10px">O agendamento entra como cirurgia confirmada e é enviado ao Google Agenda automaticamente.</p>
+          </div>
+          <div class="painel-corpo" id="cal-corpo"></div>
+        </section>
+
+        <section class="painel" aria-label="Sincronização com o Google Agenda">
+          <div class="painel-cab">
+            <h2>Sincronização com o Google</h2>
+            <span class="conta" id="ag-conta"></span>
           </div>
           <div class="painel-corpo" id="agenda"></div>
         </section>
@@ -1953,14 +1953,17 @@ async function carregarAgenda(){
     const { data: eventos } = await sb.from("agenda_eventos").select("cirurgia_id,status");
     const evPorCirurgia = {};
     (eventos || []).forEach(e => { evPorCirurgia[e.cirurgia_id] = e.status; });
-    $("ag-conta").textContent = (cirurgias || []).length ? (cirurgias.length + " próxima(s)") : "";
     if (!cirurgias || !cirurgias.length) {
-      alvo.innerHTML = '<div class="vazio">Nenhuma cirurgia confirmada com data futura. Ao confirmar uma cirurgia com data, ela entra aqui e vai para o Google Agenda.</div>';
+      $("ag-conta").textContent = "";
+      alvo.innerHTML = '<div class="vazio">Nenhuma cirurgia futura para sincronizar. Ao confirmar uma cirurgia com data, ela é enviada ao Google Agenda automaticamente.</div>';
       return;
     }
     alvo.innerHTML = "";
-    const rotuloEv = { pendente: ["Aguardando Google", "st-aguardando_confirmacao"], criado: ["Na agenda Google", "st-paga"], erro: ["Erro no Google", "st-glosada"], cancelado: ["Cancelado", "st-cancelada"] };
-    cirurgias.forEach(c => {
+    const rotuloEv = { pendente: ["Aguardando Google", "st-aguardando_confirmacao"], erro: ["Erro no Google", "st-glosada"], cancelado: ["Cancelado", "st-cancelada"] };
+    const atencao = cirurgias.filter(c => evPorCirurgia[c.id] !== "criado");
+    const okCount = cirurgias.length - atencao.length;
+    $("ag-conta").textContent = atencao.length ? (atencao.length + " pendência(s)") : "tudo em dia";
+    atencao.forEach(c => {
       const item = document.createElement("div");
       item.className = "recente";
       item.innerHTML = '<div class="info" style="cursor:pointer" title="Ver linha do tempo"><div class="nome"></div><div class="sub"></div></div><span class="badge"></span>';
@@ -1974,6 +1977,12 @@ async function carregarAgenda(){
       badge.classList.add(cls);
       alvo.appendChild(item);
     });
+    if (okCount) {
+      const resumo = document.createElement("p");
+      resumo.style.cssText = "font-size:.84rem;color:var(--cinza);margin:" + (atencao.length ? "10px 0 0" : "0");
+      resumo.textContent = "✓ " + okCount + " cirurgia(s) futura(s) já na agenda Google.";
+      alvo.appendChild(resumo);
+    }
   } catch (e) {
     alvo.innerHTML = '<div class="vazio">Agenda indisponível: ' + (e.message || e) + '</div>';
   }
