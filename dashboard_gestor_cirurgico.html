@@ -655,6 +655,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
             <div class="cal-tog" role="group" aria-label="Modo de visualização">
               <button id="cal-modo-mes" class="ativa">Mês</button>
               <button id="cal-modo-semana">Semana</button>
+              <button id="cal-modo-dia">Dia</button>
             </div>
             <div class="cal-tog" role="group" aria-label="Navegação do calendário">
               <button id="cal-prev" title="Anterior">‹</button>
@@ -1070,6 +1071,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("btn-rel-tela").addEventListener("click", relConferir);
   $("cal-modo-mes").addEventListener("click", () => calDefinirModo("mes"));
   $("cal-modo-semana").addEventListener("click", () => calDefinirModo("semana"));
+  $("cal-modo-dia").addEventListener("click", () => calDefinirModo("dia"));
   $("cal-prev").addEventListener("click", () => calNavegar(-1));
   $("cal-prox").addEventListener("click", () => calNavegar(1));
   $("cal-hoje").addEventListener("click", () => { calAncora = new Date(); carregarCalendario(); });
@@ -1831,6 +1833,10 @@ async function carregarCalendario(){
     fim = new Date(ini); fim.setDate(ini.getDate() + 42);
     const rot = primeiro.toLocaleString("pt-BR", { month: "long", year: "numeric" });
     $("cal-rotulo").textContent = rot.charAt(0).toUpperCase() + rot.slice(1);
+  } else if (calModo === "dia") {
+    ini = new Date(calAncora); ini.setHours(0,0,0,0);
+    fim = new Date(ini); fim.setDate(ini.getDate() + 1);
+    $("cal-rotulo").textContent = ini.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit" });
   } else {
     ini = new Date(calAncora); ini.setHours(0,0,0,0); ini.setDate(ini.getDate() - ini.getDay());
     fim = new Date(ini); fim.setDate(ini.getDate() + 7);
@@ -1886,7 +1892,8 @@ async function carregarCalendario(){
       }
       alvo.appendChild(grade);
     } else {
-      for (let i = 0; i < 7; i++) {
+      const nDias = calModo === "dia" ? 1 : 7;
+      for (let i = 0; i < nDias; i++) {
         const d = new Date(ini); d.setDate(ini.getDate() + i);
         const k = calChaveDia(d);
         const linha = document.createElement("div");
@@ -1895,7 +1902,7 @@ async function carregarCalendario(){
         const evsEl = linha.querySelector(".cal-sd-evs");
         const evs = porDia[k] || [];
         if (!evs.length) {
-          evsEl.innerHTML = '<span class="cal-sd-vazio">—</span>';
+          evsEl.innerHTML = '<span class="cal-sd-vazio">' + (calModo === "dia" ? "Nenhuma cirurgia neste dia." : "—") + '</span>';
         } else {
           evs.forEach(c => {
             const ev = document.createElement("button");
@@ -1921,12 +1928,13 @@ function calDefinirModo(modo){
   calModo = modo;
   $("cal-modo-mes").classList.toggle("ativa", modo === "mes");
   $("cal-modo-semana").classList.toggle("ativa", modo === "semana");
+  $("cal-modo-dia").classList.toggle("ativa", modo === "dia");
   carregarCalendario();
 }
 
 function calNavegar(passo){
   if (calModo === "mes") calAncora = new Date(calAncora.getFullYear(), calAncora.getMonth() + passo, 1);
-  else { calAncora = new Date(calAncora); calAncora.setDate(calAncora.getDate() + passo * 7); }
+  else { calAncora = new Date(calAncora); calAncora.setDate(calAncora.getDate() + passo * (calModo === "dia" ? 1 : 7)); }
   carregarCalendario();
 }
 
