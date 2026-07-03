@@ -205,10 +205,9 @@ tbody tr:last-child td{border-bottom:none}
       </div>
     </section>
 
-    <section class="painel" style="margin-top:16px;border-style:dashed;text-align:center;padding:22px">
-      <span style="display:inline-block;font-size:.7rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ambar);border:1px solid var(--ambar);border-radius:99px;padding:3px 11px;margin-bottom:10px">Fase 2 · em breve</span>
-      <h3 style="font-family:var(--display);font-size:.98rem;color:var(--titulo);margin-bottom:4px">Financeiro das assinaturas</h3>
-      <p style="font-size:.82rem;color:var(--cinza);max-width:420px;margin:0 auto">Com a cobrança via Asaas ativa, aqui entram MRR, assinaturas vigentes e inadimplência.</p>
+    <section class="painel" style="margin-top:16px">
+      <div class="painel-cab"><h2>Financeiro das assinaturas (Asaas)</h2><span class="conta" id="fa-conta"></span></div>
+      <div class="painel-corpo" id="fa-corpo"><div class="vazio">Carregando assinaturas…</div></div>
     </section>
   </main>
 </div>
@@ -260,6 +259,49 @@ async function carregar(){
     render(linhas || []);
   }catch(err){
     body.innerHTML = '<div class="err-box">Falha ao carregar:\n' + esc(err.message||err) + '</div>';
+  }
+  carregarAssinaturas();
+}
+
+// ---------- ASSINATURAS (Asaas) ----------
+const FA_ROTULOS = {
+  ativa:     ['Em dia',        '#2F7D5B', 'rgba(47,125,91,.14)'],
+  atrasada:  ['Em atraso',     '#A33B2E', 'rgba(163,59,46,.14)'],
+  pendente:  ['Trial/pendente','#B97A14', 'rgba(185,122,20,.14)'],
+  cancelada: ['Cancelada',     '#5C6662', 'rgba(92,102,98,.16)'],
+  isenta:    ['Isenta (teste)','#225E75', 'rgba(34,94,117,.14)']
+};
+async function carregarAssinaturas(){
+  const corpo = $('fa-corpo');
+  try{
+    const { data: rows, error } = await sb.rpc('assinaturas_gestao');
+    if(error) throw new Error(error.message);
+    if(!rows || !rows.length){ corpo.innerHTML = '<div class="vazio">Nenhuma assinatura registrada ainda.</div>'; $('fa-conta').textContent=''; return; }
+    const conta = st => rows.filter(r => r.status === st).length;
+    const mrr = rows.filter(r => r.status === 'ativa').reduce((s,r) => s + Number(r.valor||0), 0);
+    $('fa-conta').textContent = rows.length + ' assinatura(s)';
+    let html = '<div class="kpis" style="margin-bottom:12px">' +
+      '<div class="kpi"><div class="rotulo">MRR (ativas)</div><div class="valor">' + brl(mrr) + '</div><div class="sub">' + conta('ativa') + ' em dia</div></div>' +
+      '<div class="kpi"><div class="rotulo">Em atraso</div><div class="valor">' + conta('atrasada') + '</div><div class="sub">inadimplência</div></div>' +
+      '<div class="kpi"><div class="rotulo">Trial / pendente</div><div class="valor">' + conta('pendente') + '</div><div class="sub">ainda não pagaram</div></div>' +
+      '<div class="kpi"><div class="rotulo">Canceladas</div><div class="valor">' + conta('cancelada') + '</div><div class="sub">churn</div></div>' +
+      '<div class="kpi"><div class="rotulo">Isentas</div><div class="valor">' + conta('isenta') + '</div><div class="sub">contas de teste</div></div>' +
+      '</div>';
+    html += '<table><thead><tr><th>Médico</th><th>Situação</th><th class="num">Valor</th><th>Próx. vencimento</th><th>Último pagamento</th><th>Acesso</th></tr></thead><tbody>';
+    const fmtD = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    rows.forEach(r => {
+      const [rot, cor, fundo] = FA_ROTULOS[r.status] || [r.status, 'var(--cinza)', 'transparent'];
+      html += '<tr><td><span class="med-nome">' + esc(r.medico_nome) + '</span><br><span class="med-crm">' + esc(r.medico_crm) + '</span></td>' +
+        '<td><span style="font-size:.74rem;font-weight:600;color:' + cor + ';background:' + fundo + ';border-radius:99px;padding:3px 10px;white-space:nowrap">' + rot + '</span></td>' +
+        '<td class="num">' + (r.valor ? brl(r.valor) : '—') + '</td>' +
+        '<td>' + fmtD(r.proximo_vencimento) + '</td>' +
+        '<td>' + fmtD(r.ultimo_pagamento_em) + '</td>' +
+        '<td>' + (r.bloqueado ? '🔒 bloqueado' : (r.medico_ativo ? 'liberado' : 'inativo')) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    corpo.innerHTML = html;
+  }catch(err){
+    corpo.innerHTML = '<div class="err-box">Falha ao carregar assinaturas:\n' + esc(err.message||err) + '</div>';
   }
 }
 
