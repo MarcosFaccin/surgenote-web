@@ -137,10 +137,11 @@ html[data-tema="escuro"] #view-login{
 }
 
 /* ---------- app ---------- */
-header.topo{background:var(--verde-escuro);color:#fff;padding:14px 28px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-.marca{font-family:var(--display);font-weight:700;font-size:1.15rem;letter-spacing:.2px}
-.marca small{display:block;font-family:var(--corpo);font-weight:400;font-size:.72rem;opacity:.75;letter-spacing:.4px}
-.aovivo{display:flex;align-items:center;gap:7px;font-size:.78rem;background:rgba(255,255,255,.08);padding:5px 12px;border-radius:99px}
+header.topo{background:var(--verde-escuro);color:#fff;padding:16px 28px;display:flex;align-items:center;gap:16px;flex-wrap:nowrap}
+.marca{font-family:var(--display);font-weight:700;font-size:1.15rem;letter-spacing:.2px;min-width:0}
+.marca #titulo-app{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.marca small{display:block;font-family:var(--corpo);font-weight:400;font-size:.72rem;opacity:.75;letter-spacing:.4px;white-space:nowrap}
+.aovivo{display:flex;align-items:center;gap:7px;font-size:.78rem;background:rgba(255,255,255,.08);padding:5px 12px;border-radius:99px;white-space:nowrap;flex-shrink:0}
 .ponto{width:8px;height:8px;border-radius:50%;background:#8E9B96}
 .aovivo.on .ponto{background:#5BD8A0}
 @media (prefers-reduced-motion: no-preference){
@@ -148,8 +149,10 @@ header.topo{background:var(--verde-escuro);color:#fff;padding:14px 28px;display:
   @keyframes pulsa{0%,100%{box-shadow:0 0 0 0 rgba(91,216,160,.5)}50%{box-shadow:0 0 0 6px rgba(91,216,160,0)}}
 }
 .topo .espaco{flex:1}
-.usuario{font-size:.82rem;opacity:.85}
-.btn-sair{background:transparent;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:7px 14px;font-size:.84rem}
+.topo-acoes{display:flex;align-items:center;gap:14px;flex-shrink:0}
+.topo-acoes .divisor{width:1px;height:22px;background:rgba(255,255,255,.18)}
+.usuario{font-size:.82rem;opacity:.85;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn-sair{background:transparent;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:7px 14px;font-size:.84rem;white-space:nowrap;flex-shrink:0}
 .btn-sair:hover{background:rgba(255,255,255,.12)}
 
 main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
@@ -205,9 +208,9 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 }
 
 /* ---------- personalização ---------- */
-.logo-medico{height:34px;max-width:150px;object-fit:contain;border-radius:6px;background:rgba(255,255,255,.9);padding:3px 6px}
-.sn-selo{display:flex;align-items:center;gap:7px;font-family:var(--display);font-weight:700;font-size:.86rem;color:rgba(255,255,255,.85);letter-spacing:.02em}
-.sn-selo img{width:22px;height:22px;border-radius:6px}
+.logo-medico{height:46px;max-width:190px;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.92);padding:4px 8px;flex-shrink:0}
+.sn-selo{display:flex;align-items:center;gap:8px;font-family:var(--display);font-weight:700;font-size:.92rem;color:rgba(255,255,255,.85);letter-spacing:.02em;white-space:nowrap;flex-shrink:0}
+.sn-selo img{width:30px;height:30px;border-radius:8px}
 @media (max-width: 640px){.sn-selo{display:none}}
 .ap-painel{
   position:fixed;top:64px;right:20px;z-index:60;width:290px;
@@ -328,6 +331,8 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 @media (max-width: 640px){
   /* cabeçalho compacto: só logo + nome + botões-ícone */
   header.topo{padding:10px 10px;gap:7px;flex-wrap:nowrap}
+  .topo-acoes{gap:6px}
+  .topo-acoes .divisor{display:none}
   .marca{font-size:.94rem;min-width:0;flex:1}
   .marca #titulo-app{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .marca small{font-size:.6rem;white-space:nowrap}
@@ -443,10 +448,13 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
     <div class="marca"><span id="titulo-app">Gestão Cirúrgica</span><small>por <b>SurgeNote</b><span class="so-desktop"> · iddeia</span></small></div>
     <div class="aovivo" id="aovivo"><span class="ponto"></span><span id="aovivo-txt">conectando…</span></div>
     <div class="espaco"></div>
-    <span class="sn-selo" title="SurgeNote — iddeia"><img src="icon-192.png" alt="SurgeNote">SurgeNote</span>
-    <span class="usuario" id="usuario-email"></span>
-    <button class="btn-sair" id="btn-aparencia" title="Personalizar aparência">Aparência</button>
-    <button class="btn-sair" id="btn-sair">Sair</button>
+    <div class="topo-acoes">
+      <span class="sn-selo" title="SurgeNote — iddeia"><img src="icon-192.png" alt="SurgeNote">SurgeNote</span>
+      <span class="divisor"></span>
+      <span class="usuario" id="usuario-email"></span>
+      <button class="btn-sair" id="btn-aparencia" title="Personalizar aparência">Aparência</button>
+      <button class="btn-sair" id="btn-sair">Sair</button>
+    </div>
   </header>
 
   <div id="aparencia-painel" class="ap-painel" hidden>
