@@ -301,11 +301,14 @@ async function portaoMFA(session){
     const { data: en, error: eEn } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Autenticador iddeia' });
     if(eEn){ $('mfa-msg').className='msg err'; $('mfa-msg').textContent = 'Falha ao iniciar 2FA: ' + eEn.message; return; }
     mfaFactorId = en.id;
-    // qr_code pode vir como SVG cru (<svg…>) ou data URI — tratar ambos
+    // qr_code pode vir como data URI ou SVG cru. Sempre renderizar via <img>
+    // (SVG dentro de <img> fica em sandbox, não executa script) — evita XSS.
     const qr = (en.totp && en.totp.qr_code) ? en.totp.qr_code.trim() : '';
-    if(qr.startsWith('<svg')) $('mfa-qr').innerHTML = qr;
-    else if(qr.startsWith('data:')) { const im=document.createElement('img'); im.alt='QR'; im.src=qr; $('mfa-qr').innerHTML=''; $('mfa-qr').appendChild(im); }
-    else $('mfa-qr').innerHTML = '';
+    let src = '';
+    if(qr.startsWith('data:')) src = qr;
+    else if(/^<svg[\s>]/i.test(qr)) src = 'data:image/svg+xml;utf8,' + encodeURIComponent(qr);
+    $('mfa-qr').innerHTML = '';
+    if(src){ const im = document.createElement('img'); im.alt = 'QR'; im.src = src; $('mfa-qr').appendChild(im); }
     $('mfa-secret').textContent = en.totp.secret || '';
     $('mfa-code').focus();
   }
