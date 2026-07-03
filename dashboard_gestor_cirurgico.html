@@ -75,6 +75,48 @@ button{font-family:inherit;cursor:pointer}
 .btn-recusar{background:transparent;color:var(--vermelho);border:1px solid var(--vermelho);padding:8px 14px;font-size:.88rem}
 .btn-recusar:hover{background:var(--vermelho-tinta)}
 .erro-login{color:var(--vermelho);font-size:.88rem;margin-top:10px;min-height:1.2em}
+.erro-login.ok{color:var(--verde)}
+
+/* ---------- login split-screen (identidade SurgeNote) ---------- */
+.login-split{padding:0;align-items:stretch}
+.login-brand{
+  background:linear-gradient(160deg, var(--verde-escuro), color-mix(in srgb, var(--marca) 55%, #06131A));
+  color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;
+  gap:14px;padding:48px 56px;flex:1 1 46%;
+}
+.login-brand img{width:72px;height:72px;border-radius:18px;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+.login-brand .lb-nome{font-family:var(--display);font-weight:700;font-size:2rem;letter-spacing:.2px}
+.login-brand .lb-frase{font-size:1.02rem;line-height:1.5;opacity:.85;max-width:34ch;margin:0}
+.login-brand .lb-selo{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;opacity:.55}
+.login-form-area{flex:1 1 54%;display:flex;align-items:center;justify-content:center;padding:32px 24px;background:var(--papel)}
+.login-card{border:none;box-shadow:0 10px 40px color-mix(in srgb, var(--marca) 16%, transparent)}
+.senha-box{position:relative}
+.senha-box input{padding-right:46px}
+.olho{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:transparent;border:none;
+  padding:6px;border-radius:6px;color:var(--cinza);display:flex;align-items:center}
+.olho:hover{color:var(--titulo);background:var(--verde-tinta)}
+.btn-entrar-destaque{box-shadow:0 6px 18px color-mix(in srgb, var(--marca) 38%, transparent);margin-top:4px}
+.btn-entrar-destaque:disabled{opacity:.65;cursor:wait;filter:none}
+.btn-contorno{width:100%;justify-content:center;background:transparent;color:var(--titulo);
+  border:1.5px solid var(--verde);margin-top:10px}
+.btn-contorno:hover{background:var(--verde-tinta);filter:none}
+.link-acao{background:none;border:none;color:var(--cinza);font-size:.88rem;text-decoration:underline;
+  text-underline-offset:3px;margin-top:14px;padding:4px;display:block}
+.link-acao:hover{color:var(--titulo)}
+@supports not (color: color-mix(in srgb, red, blue)){
+  .login-brand{background:linear-gradient(160deg,#123647,#0A1E28)}
+  .login-card{box-shadow:0 10px 40px rgba(18,54,71,.18)}
+  .btn-entrar-destaque{box-shadow:0 6px 18px rgba(29,84,104,.4)}
+}
+@media (max-width: 899px){
+  .login-split{flex-direction:column}
+  .login-brand{flex:none;flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px;padding:22px 20px}
+  .login-brand img{width:46px;height:46px;border-radius:12px}
+  .login-brand .lb-nome{font-size:1.3rem}
+  .login-brand .lb-frase{flex-basis:100%;font-size:.9rem;margin:0}
+  .login-brand .lb-selo{display:none}
+  .login-form-area{align-items:flex-start;padding:24px 16px}
+}
 
 /* ---------- app ---------- */
 header.topo{background:var(--verde-escuro);color:#fff;padding:14px 28px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
@@ -340,14 +382,39 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 </div>
 
 <!-- TELA: login -->
-<div id="view-login" class="gate" hidden>
-  <div class="gate-card">
-    <h1>Gestão Cirúrgica</h1>
-    <p>Acesso do gestor. Entre com o usuário criado no Supabase.</p>
-    <label class="campo"><span>E-mail</span><input type="email" id="login-email" autocomplete="username" placeholder="gestor@clinica.com.br"></label>
-    <label class="campo"><span>Senha</span><input type="password" id="login-senha" autocomplete="current-password" placeholder="••••••••"></label>
-    <button class="btn btn-primario" id="btn-entrar">Entrar no painel</button>
-    <p class="erro-login" id="login-erro"></p>
+<div id="view-login" class="gate login-split" hidden>
+  <div class="login-brand">
+    <img src="icon-192.png" alt="SurgeNote">
+    <div class="lb-nome">SurgeNote</div>
+    <p class="lb-frase">Sua produção cirúrgica, ditada por WhatsApp. Honorários, agenda e cobranças num só painel.</p>
+    <span class="lb-selo">por iddeia</span>
+  </div>
+  <div class="login-form-area">
+    <div class="gate-card login-card">
+      <div id="login-form">
+        <h1>Bem-vindo de volta</h1>
+        <p>Entre com seu e-mail e senha para acessar o painel.</p>
+        <label class="campo"><span>E-mail</span><input type="email" id="login-email" autocomplete="username" placeholder="voce@exemplo.com.br"></label>
+        <label class="campo"><span>Senha</span>
+          <div class="senha-box">
+            <input type="password" id="login-senha" autocomplete="current-password" placeholder="••••••••">
+            <button type="button" class="olho" id="olho-senha" aria-label="Mostrar senha" title="Mostrar senha"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          </div>
+        </label>
+        <button class="btn btn-primario btn-entrar-destaque" id="btn-entrar">Entrar no painel</button>
+        <p class="erro-login" id="login-erro"></p>
+        <button class="btn btn-contorno" id="btn-criar-conta">Criar minha conta</button>
+        <button class="link-acao" id="btn-esqueci">Esqueci minha senha</button>
+      </div>
+      <div id="login-reset" hidden>
+        <h1>Defina sua nova senha</h1>
+        <p>Você chegou aqui pelo link do e-mail. Escolha a nova senha do painel.</p>
+        <label class="campo"><span>Nova senha</span><input type="password" id="reset-senha" autocomplete="new-password" placeholder="mínimo 6 caracteres"></label>
+        <label class="campo"><span>Repita a nova senha</span><input type="password" id="reset-senha2" autocomplete="new-password" placeholder="••••••••"></label>
+        <button class="btn btn-primario btn-entrar-destaque" id="btn-reset-salvar">Salvar nova senha</button>
+        <p class="erro-login" id="reset-erro"></p>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -882,6 +949,14 @@ window.addEventListener("DOMContentLoaded", async () => {
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   $("btn-entrar").addEventListener("click", entrar);
   $("login-senha").addEventListener("keydown", (e) => { if (e.key === "Enter") entrar(); });
+  $("olho-senha").addEventListener("click", () => {
+    const inp = $("login-senha"), aberto = inp.type === "text";
+    inp.type = aberto ? "password" : "text";
+    $("olho-senha").setAttribute("aria-label", aberto ? "Mostrar senha" : "Ocultar senha");
+  });
+  $("btn-criar-conta").addEventListener("click", () => { location.href = "cadastro.html"; });
+  $("btn-esqueci").addEventListener("click", esqueciSenha);
+  $("btn-reset-salvar").addEventListener("click", salvarNovaSenha);
   $("btn-sair").addEventListener("click", async () => { await sb.auth.signOut(); });
   $("btn-recarregar").addEventListener("click", carregarTudo);
   $("btn-rel-pdf").addEventListener("click", gerarRelatorioPDF);
@@ -923,20 +998,63 @@ window.addEventListener("DOMContentLoaded", async () => {
     clearTimeout(mvTimer);
     mvTimer = setTimeout(mvBuscar, 350);
   });
-  sb.auth.onAuthStateChange((_ev, sessao) => {
+  sb.auth.onAuthStateChange((ev, sessao) => {
+    if (ev === "PASSWORD_RECOVERY" || modoReset) {
+      modoReset = true;
+      mostrar("view-login");
+      $("login-form").hidden = true;
+      $("login-reset").hidden = false;
+      return;
+    }
     if (sessao) iniciarApp(sessao); else mostrar("view-login");
   });
   const { data } = await sb.auth.getSession();
-  if (data.session) iniciarApp(data.session); else mostrar("view-login");
+  if (!modoReset) {
+    if (data.session) iniciarApp(data.session); else mostrar("view-login");
+  }
 });
 
 async function entrar(){
+  $("login-erro").className = "erro-login";
   $("login-erro").textContent = "";
+  const btn = $("btn-entrar");
+  btn.disabled = true; btn.textContent = "Entrando…";
   const { error } = await sb.auth.signInWithPassword({
     email: $("login-email").value.trim(),
     password: $("login-senha").value
   });
+  btn.disabled = false; btn.textContent = "Entrar no painel";
   if (error) $("login-erro").textContent = "Não foi possível entrar: " + error.message;
+}
+
+async function esqueciSenha(){
+  const email = $("login-email").value.trim();
+  const msg = $("login-erro");
+  msg.className = "erro-login";
+  if (!email) { msg.textContent = "Preencha o e-mail acima e clique de novo em \"Esqueci minha senha\"."; return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  if (error) { msg.textContent = "Não foi possível enviar: " + error.message; return; }
+  msg.className = "erro-login ok";
+  msg.textContent = "✓ E-mail enviado para " + email + ". Abra o link para definir a nova senha.";
+}
+
+let modoReset = false;
+async function salvarNovaSenha(){
+  const msg = $("reset-erro");
+  msg.className = "erro-login";
+  const s1 = $("reset-senha").value, s2 = $("reset-senha2").value;
+  if (s1.length < 6) { msg.textContent = "A senha precisa ter pelo menos 6 caracteres."; return; }
+  if (s1 !== s2) { msg.textContent = "As senhas não conferem."; return; }
+  const btn = $("btn-reset-salvar");
+  btn.disabled = true; btn.textContent = "Salvando…";
+  const { error } = await sb.auth.updateUser({ password: s1 });
+  btn.disabled = false; btn.textContent = "Salvar nova senha";
+  if (error) { msg.textContent = "Não foi possível salvar: " + error.message; return; }
+  modoReset = false;
+  $("login-reset").hidden = true;
+  $("login-form").hidden = false;
+  const { data } = await sb.auth.getSession();
+  if (data.session) iniciarApp(data.session);
 }
 
 let appIniciado = false;
