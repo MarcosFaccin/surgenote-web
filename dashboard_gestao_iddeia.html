@@ -144,6 +144,7 @@ tbody tr:last-child td{border-bottom:none}
   main{padding:12px 12px 50px}
   .form-grid{grid-template-columns:1fr}
 }
+#mfa-qr svg, #mfa-qr img{width:180px;height:180px;display:block;background:#fff;border-radius:8px;padding:6px}
 </style>
 </head>
 <body>
@@ -300,7 +301,11 @@ async function portaoMFA(session){
     const { data: en, error: eEn } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Autenticador iddeia' });
     if(eEn){ $('mfa-msg').className='msg err'; $('mfa-msg').textContent = 'Falha ao iniciar 2FA: ' + eEn.message; return; }
     mfaFactorId = en.id;
-    $('mfa-qr').innerHTML = en.totp.qr_code ? '<img alt="QR" style="width:180px;height:180px" src="' + en.totp.qr_code + '">' : '';
+    // qr_code pode vir como SVG cru (<svg…>) ou data URI — tratar ambos
+    const qr = (en.totp && en.totp.qr_code) ? en.totp.qr_code.trim() : '';
+    if(qr.startsWith('<svg')) $('mfa-qr').innerHTML = qr;
+    else if(qr.startsWith('data:')) { const im=document.createElement('img'); im.alt='QR'; im.src=qr; $('mfa-qr').innerHTML=''; $('mfa-qr').appendChild(im); }
+    else $('mfa-qr').innerHTML = '';
     $('mfa-secret').textContent = en.totp.secret || '';
     $('mfa-code').focus();
   }
