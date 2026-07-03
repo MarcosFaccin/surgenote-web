@@ -41,9 +41,34 @@ button{font-family:inherit;cursor:pointer}
 :focus-visible{outline:3px solid var(--verde);outline-offset:2px;border-radius:4px}
 [hidden]{display:none!important}
 
-/* ---------- login ---------- */
-.gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-.gate-card{background:var(--branco);border:1px solid var(--linha);border-radius:var(--raio);padding:40px;max-width:420px;width:100%}
+/* ---------- login (split-screen, identidade SurgeNote) ---------- */
+.gate{min-height:100vh;display:flex;align-items:stretch;padding:0}
+.login-brand{
+  background:linear-gradient(160deg, var(--verde-escuro), color-mix(in srgb, var(--marca) 55%, #06131A));
+  color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;
+  gap:14px;padding:48px 56px;flex:1 1 46%;
+}
+.login-brand img{width:72px;height:72px;border-radius:18px;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+.login-brand .lb-nome{font-family:var(--display);font-weight:700;font-size:2rem;letter-spacing:.2px}
+.login-brand .lb-frase{font-size:1.02rem;line-height:1.5;opacity:.85;max-width:34ch;margin:0}
+.login-brand .lb-selo{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;opacity:.55}
+.login-form-area{flex:1 1 54%;display:flex;align-items:center;justify-content:center;padding:32px 24px;background:var(--papel)}
+.gate-card{background:var(--branco);border:none;border-radius:var(--raio);padding:40px;max-width:420px;width:100%;
+  box-shadow:0 10px 40px color-mix(in srgb, var(--marca) 16%, transparent)}
+.btn-primario{box-shadow:0 6px 18px color-mix(in srgb, var(--marca) 38%, transparent)}
+@supports not (color: color-mix(in srgb, red, blue)){
+  .login-brand{background:linear-gradient(160deg,#123647,#0A1E28)}
+  .gate-card{box-shadow:0 10px 40px rgba(18,54,71,.18)}
+}
+@media (max-width: 899px){
+  .gate{flex-direction:column}
+  .login-brand{flex:none;flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px;padding:22px 20px}
+  .login-brand img{width:46px;height:46px;border-radius:12px}
+  .login-brand .lb-nome{font-size:1.3rem}
+  .login-brand .lb-frase{flex-basis:100%;font-size:.9rem;margin:0}
+  .login-brand .lb-selo{display:none}
+  .login-form-area{align-items:flex-start;padding:24px 16px}
+}
 .gate-card h1{font-family:var(--display);font-size:1.5rem;color:var(--titulo);margin-bottom:4px}
 .gate-card p{color:var(--cinza);font-size:.92rem;margin-bottom:22px}
 .campo{display:block;margin-bottom:14px}
@@ -125,13 +150,21 @@ tbody tr:last-child td{border-bottom:none}
 
 <!-- LOGIN -->
 <div id="view-login" class="gate">
-  <div class="gate-card">
-    <h1>Gestão iddeia</h1>
-    <p>Visão agregada do SurgeNote — acesso restrito à equipe.</p>
-    <label class="campo"><span>E-mail</span><input type="email" id="email" autocomplete="username" placeholder="contato@iddeia.com.br"></label>
-    <label class="campo"><span>Senha</span><input type="password" id="senha" autocomplete="current-password" placeholder="••••••••"></label>
-    <button class="btn btn-primario" id="btn-login">Entrar</button>
-    <div class="msg" id="login-msg"></div>
+  <div class="login-brand">
+    <img src="icon-192.png" alt="SurgeNote">
+    <div class="lb-nome">SurgeNote</div>
+    <p class="lb-frase">Gestão iddeia — visão agregada do SaaS: tração, médicos ativos e cadastro assistido.</p>
+    <span class="lb-selo">por iddeia</span>
+  </div>
+  <div class="login-form-area">
+    <div class="gate-card">
+      <h1>Gestão iddeia</h1>
+      <p>Acesso restrito à equipe. Entre com seu e-mail e senha.</p>
+      <label class="campo"><span>E-mail</span><input type="email" id="email" autocomplete="username" placeholder="contato@iddeia.com.br"></label>
+      <label class="campo"><span>Senha</span><input type="password" id="senha" autocomplete="current-password" placeholder="••••••••"></label>
+      <button class="btn btn-primario" id="btn-login">Entrar</button>
+      <div class="msg" id="login-msg"></div>
+    </div>
   </div>
 </div>
 

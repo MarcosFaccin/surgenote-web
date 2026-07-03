@@ -9,16 +9,24 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --verde:#0E5A4E; --verde-escuro:#083A33; --verde-tinta:#DDEEE9;
+  --marca:#1D5468;
+  --verde:var(--marca);
+  --verde-escuro:color-mix(in srgb, var(--marca) 72%, #04140F);
+  --verde-tinta:color-mix(in srgb, var(--marca) 14%, #FFFFFF);
   --papel:#F4F6F3; --branco:#FFFFFF; --grafite:#1C2421; --cinza:#5C6662;
   --linha:#DCE3DF; --vermelho:#A33B2E; --raio:12px;
   --display:"Bricolage Grotesque",sans-serif; --corpo:"Instrument Sans",sans-serif;
+}
+@supports not (color: color-mix(in srgb, red, blue)){
+  :root{--verde-escuro:#123647;--verde-tinta:#DCE8ED}
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--corpo);background:var(--papel);color:var(--grafite);line-height:1.55;min-height:100vh}
 .wrap{max-width:960px;margin:0 auto;padding:40px 24px 70px}
 .hero{text-align:center;margin-bottom:36px}
-.hero .marca{font-family:var(--display);font-weight:700;font-size:1.1rem;color:var(--verde-escuro);letter-spacing:.3px;margin-bottom:18px}
+.hero .marca{display:flex;align-items:center;justify-content:center;gap:10px;font-family:var(--display);font-weight:700;font-size:1.1rem;color:var(--verde-escuro);letter-spacing:.3px;margin-bottom:18px}
+.hero .marca img{width:40px;height:40px;border-radius:10px;box-shadow:0 4px 14px color-mix(in srgb, var(--marca) 30%, transparent)}
+.btn{box-shadow:0 6px 18px color-mix(in srgb, var(--marca) 30%, transparent)}
 .hero h1{font-family:var(--display);font-size:clamp(1.6rem,4vw,2.4rem);color:var(--verde-escuro);line-height:1.2;max-width:640px;margin:0 auto 12px}
 .hero p{color:var(--cinza);max-width:540px;margin:0 auto;font-size:1.02rem}
 .grade{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
@@ -51,7 +59,7 @@ body{font-family:var(--corpo);background:var(--papel);color:var(--grafite);line-
 <body>
 <div class="wrap">
   <div class="hero">
-    <div class="marca">● SurgeNote · iddeia</div>
+    <div class="marca"><img src="icon-192.png" alt="">SurgeNote <span style="font-weight:400;opacity:.6">· iddeia</span></div>
     <h1>Dite a cirurgia no WhatsApp.<br>O resto a gente registra.</h1>
     <p>Áudio ou texto logo após o procedimento. A IA estrutura o registro, calcula o honorário de referência e mostra tudo no seu painel.</p>
   </div>
@@ -80,7 +88,7 @@ body{font-family:var(--corpo);background:var(--papel);color:var(--grafite);line-
 
       <div class="sucesso" id="sucesso">
         <div class="check">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0E5A4E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1D5468" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
         </div>
         <h2>Conta criada!</h2>
         <p><b>Próximo passo:</b> mande um "oi" pelo seu WhatsApp cadastrado para o número da iddeia e dite sua primeira cirurgia.</p>
