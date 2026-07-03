@@ -1606,13 +1606,17 @@ async function relConferir(){
 }
 
 async function relMarcarPago(c, saldo, btn){
+  if (btn.disabled) return;
   btn.disabled = true; btn.textContent = "Registrando…";
+  const chave = (crypto.randomUUID ? crypto.randomUUID()
+    : Date.now() + "-" + Math.random().toString(36).slice(2));
   const { error } = await sb.from("pagamentos").insert({
-    cirurgia_id: c.id, valor: saldo, data_pagamento: new Date().toISOString().slice(0, 10), fonte: "conferencia"
+    cirurgia_id: c.id, valor: saldo, data_pagamento: new Date().toISOString().slice(0, 10),
+    fonte: "conferencia", idempotency_key: chave
   });
-  if (error) { toast("Não foi possível registrar: " + error.message, true); btn.disabled = false; btn.textContent = "✓ Recebi " + brl.format(saldo); return; }
-  await sb.from("cirurgias").update({ status: "paga" }).eq("id", c.id);
-  toast("Recebimento de " + brl.format(saldo) + " registrado — marcada como Paga.");
+  if (error && error.code !== "23505") { toast("Não foi possível registrar: " + error.message, true); btn.disabled = false; btn.textContent = "✓ Recebi " + brl.format(saldo); return; }
+  await sb.from("cirurgias").update({ status: "paga" }).eq("id", c.id).neq("status", "paga");
+  toast(error && error.code === "23505" ? "Recebimento já registrado." : "Recebimento de " + brl.format(saldo) + " registrado — marcada como Paga.");
   relConferir();
   carregarTudo();
 }
@@ -2294,17 +2298,36 @@ async function dtRegistrarPagamento(){
   const valor = Number($("dt-pg-valor").value);
   const data = $("dt-pg-data").value;
   if (!valor || valor <= 0 || !data) { toast("Informe valor e data do pagamento.", true); return; }
+  const btn = $("dt-pg-salvar");
+  if (btn.disabled) return;              // trava reentrada (duplo-clique)
+  btn.disabled = true;
+  // chave idempotente por clique: reenvio do MESMO pagamento colide na UNIQUE
+  const chave = (crypto.randomUUID ? crypto.randomUUID()
+    : Date.now() + "-" + Math.random().toString(36).slice(2));
   const { error } = await sb.from("pagamentos").insert({
-    cirurgia_id: dtCirurgia.id, valor: valor, data_pagamento: data, fonte: "dashboard"
+    cirurgia_id: dtCirurgia.id, valor: valor, data_pagamento: data, fonte: "dashboard",
+    idempotency_key: chave
   });
-  if (error) { toast("Não foi possível registrar: " + error.message, true); return; }
-  const totalPago = Number(dtCirurgia.total_pago || 0) + valor;
-  if (totalPago >= Number(dtCirurgia.valor_previsto || 0) - 0.009 && dtCirurgia.status !== "paga") {
-    await sb.from("cirurgias").update({ status: "paga" }).eq("id", dtCirurgia.id);
-    toast("Pagamento registrado — cirurgia quitada e marcada como Paga.");
+  if (error) {
+    // 23505 = duplicata (reenvio do mesmo clique) → já foi registrado, trata como sucesso
+    if (error.code === "23505") {
+      toast("Pagamento já havia sido registrado.");
+    } else {
+      btn.disabled = false;
+      toast("Não foi possível registrar: " + error.message, true);
+      return;
+    }
   } else {
-    toast("Pagamento de " + brl.format(valor) + " registrado.");
+    const totalPago = Number(dtCirurgia.total_pago || 0) + valor;
+    if (totalPago >= Number(dtCirurgia.valor_previsto || 0) - 0.009 && dtCirurgia.status !== "paga") {
+      // update condicional: só quita se ainda não estiver paga (evita corrida)
+      await sb.from("cirurgias").update({ status: "paga" }).eq("id", dtCirurgia.id).neq("status", "paga");
+      toast("Pagamento registrado — cirurgia quitada e marcada como Paga.");
+    } else {
+      toast("Pagamento de " + brl.format(valor) + " registrado.");
+    }
   }
+  btn.disabled = false;
   abrirDetalhe(dtCirurgia.id);
   carregarTudo();
 }
