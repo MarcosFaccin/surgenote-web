@@ -168,6 +168,25 @@ tbody tr:last-child td{border-bottom:none}
   </div>
 </div>
 
+<!-- MFA (2º fator) -->
+<div id="view-mfa" class="gate" hidden style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
+  <div class="gate-card" style="max-width:420px;text-align:center">
+    <h1 id="mfa-titulo">Verificação em duas etapas</h1>
+    <p id="mfa-texto">Digite o código de 6 dígitos do seu app autenticador.</p>
+    <div id="mfa-qr-area" hidden>
+      <div id="mfa-qr" style="display:flex;justify-content:center;margin:8px 0"></div>
+      <p style="font-size:.78rem;color:var(--cinza)">Escaneie o QR no Google Authenticator / Authy. Se não puder escanear, use o código:</p>
+      <p id="mfa-secret" style="font-family:var(--mono);font-size:.82rem;word-break:break-all;background:var(--verde-tinta);border-radius:8px;padding:8px;margin:8px 0;color:var(--titulo)"></p>
+    </div>
+    <label class="campo" style="text-align:left"><span>Código do app</span>
+      <input id="mfa-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="letter-spacing:.3em;text-align:center;font-size:1.1rem">
+    </label>
+    <button class="btn btn-primario" id="mfa-verificar">Verificar</button>
+    <div class="msg" id="mfa-msg"></div>
+    <button class="btn-sair" id="mfa-sair" style="background:transparent;border:none;color:var(--cinza);text-decoration:underline;margin-top:12px;font-size:.84rem">Cancelar e sair</button>
+  </div>
+</div>
+
 <!-- APP -->
 <div id="view-app" hidden>
   <header class="topo">
@@ -243,10 +262,66 @@ async function entrar(){
   const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
   $('btn-login').disabled = false; $('btn-login').textContent = 'Entrar';
   if(error){ msg.className='msg err'; msg.textContent = 'Não foi possível entrar: ' + error.message; return; }
-  abrir(data.session);
+  portaoMFA(data.session);
 }
+
+// ---------- 2º FATOR (TOTP) ----------
+let mfaFactorId = null;
+
+async function portaoMFA(session){
+  const { data: aal, error } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if(error){ // se algo falhar na checagem, não trava o acesso do gestor legítimo
+    return abrir(session);
+  }
+  if(aal.currentLevel === 'aal2'){ return abrir(session); } // já verificado nesta sessão
+  $('view-login').hidden = true;
+  $('view-mfa').hidden = false;
+  $('mfa-msg').textContent = ''; $('mfa-code').value = '';
+  if(aal.nextLevel === 'aal2'){
+    // já tem app configurado → só pedir o código
+    const { data: fatores } = await sb.auth.mfa.listFactors();
+    const totp = (fatores?.totp || []).find(f => f.status === 'verified');
+    mfaFactorId = totp ? totp.id : null;
+    $('mfa-titulo').textContent = 'Verificação em duas etapas';
+    $('mfa-texto').textContent = 'Digite o código de 6 dígitos do seu app autenticador.';
+    $('mfa-qr-area').hidden = true;
+    $('mfa-code').focus();
+  } else {
+    // primeiro acesso: configurar o app (mostrar QR)
+    $('mfa-titulo').textContent = 'Ative a verificação em duas etapas';
+    $('mfa-texto').textContent = 'Escaneie o QR abaixo no seu app autenticador e digite o código gerado. Isto protege o painel da iddeia.';
+    $('mfa-qr-area').hidden = false;
+    const { data: en, error: eEn } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Autenticador iddeia' });
+    if(eEn){ $('mfa-msg').className='msg err'; $('mfa-msg').textContent = 'Falha ao iniciar 2FA: ' + eEn.message; return; }
+    mfaFactorId = en.id;
+    $('mfa-qr').innerHTML = en.totp.qr_code ? '<img alt="QR" style="width:180px;height:180px" src="' + en.totp.qr_code + '">' : '';
+    $('mfa-secret').textContent = en.totp.secret || '';
+    $('mfa-code').focus();
+  }
+}
+
+async function verificarMFA(){
+  const code = ($('mfa-code').value || '').replace(/\D/g,'');
+  const msg = $('mfa-msg'); msg.className = 'msg';
+  if(code.length !== 6){ msg.className='msg err'; msg.textContent='Digite os 6 dígitos.'; return; }
+  if(!mfaFactorId){ msg.className='msg err'; msg.textContent='Fator não identificado. Recarregue e tente de novo.'; return; }
+  const btn = $('mfa-verificar'); btn.disabled = true; btn.textContent = 'Verificando…';
+  try{
+    const { data: ch, error: eCh } = await sb.auth.mfa.challenge({ factorId: mfaFactorId });
+    if(eCh) throw new Error(eCh.message);
+    const { error: eV } = await sb.auth.mfa.verify({ factorId: mfaFactorId, challengeId: ch.id, code });
+    if(eV) throw new Error(eV.message);
+    const { data: s } = await sb.auth.getSession();
+    $('view-mfa').hidden = true;
+    abrir(s.session);
+  }catch(err){
+    msg.className='msg err'; msg.textContent = 'Código inválido ou expirado. Tente o próximo código do app.';
+  }finally{ btn.disabled = false; btn.textContent = 'Verificar'; }
+}
+
 function abrir(session){
   $('view-login').hidden = true;
+  $('view-mfa').hidden = true;
   $('view-app').hidden = false;
   $('who-email').textContent = session.user.email;
   carregar();
@@ -535,10 +610,13 @@ $('senha').addEventListener('keydown', e => { if(e.key==='Enter') entrar(); });
 $('email').addEventListener('keydown', e => { if(e.key==='Enter') $('senha').focus(); });
 $('btn-logout').addEventListener('click', sair);
 $('cm-btn').addEventListener('click', cadastrarMedico);
+$('mfa-verificar').addEventListener('click', verificarMFA);
+$('mfa-code').addEventListener('keydown', e => { if(e.key==='Enter') verificarMFA(); });
+$('mfa-sair').addEventListener('click', sair);
 
 (async () => {
   const { data } = await sb.auth.getSession();
-  if(data.session) abrir(data.session);
+  if(data.session) portaoMFA(data.session);   // sessão salva ainda passa pelo 2º fator
 })();
 </script>
 </body>
