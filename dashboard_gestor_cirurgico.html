@@ -78,6 +78,24 @@ button{font-family:inherit;cursor:pointer}
 .erro-login.ok{color:var(--verde)}
 
 /* ---------- login split-screen (identidade SurgeNote) ---------- */
+/* A tela de login é SEMPRE petróleo SurgeNote: redefine a marca e os tons
+   derivados localmente, ignorando a cor personalizada salva no aparelho.
+   (Decisão de produto 03/07/2026 — a cor pessoal só vale dentro do painel.) */
+#view-login{
+  --marca:#1D5468;
+  --verde:var(--marca);
+  --verde-escuro:color-mix(in srgb, var(--marca) 72%, #04140F);
+  --verde-tinta:color-mix(in srgb, var(--marca) 14%, #FFFFFF);
+  --titulo:var(--verde-escuro);
+}
+html[data-tema="escuro"] #view-login{
+  --papel:color-mix(in srgb, var(--marca) 14%, #090D10);
+  --branco:color-mix(in srgb, var(--marca) 20%, #0C1216);
+  --cinza:color-mix(in srgb, var(--marca) 24%, #98A6AD);
+  --linha:color-mix(in srgb, var(--marca) 26%, #1B2429);
+  --verde-tinta:color-mix(in srgb, var(--marca) 30%, #0C1216);
+  --titulo:color-mix(in srgb, var(--marca) 34%, #EAF1F5);
+}
 .login-split{padding:0;align-items:stretch}
 .login-brand{
   background:linear-gradient(160deg, var(--verde-escuro), color-mix(in srgb, var(--marca) 55%, #06131A));
