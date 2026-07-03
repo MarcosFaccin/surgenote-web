@@ -287,21 +287,67 @@ async function carregarAssinaturas(){
       '<div class="kpi"><div class="rotulo">Canceladas</div><div class="valor">' + conta('cancelada') + '</div><div class="sub">churn</div></div>' +
       '<div class="kpi"><div class="rotulo">Isentas</div><div class="valor">' + conta('isenta') + '</div><div class="sub">contas de teste</div></div>' +
       '</div>';
-    html += '<table><thead><tr><th>Médico</th><th>Situação</th><th class="num">Valor</th><th>Próx. vencimento</th><th>Último pagamento</th><th>Acesso</th></tr></thead><tbody>';
+    html += '<table><thead><tr><th>Médico</th><th>Situação</th><th class="num">Valor</th><th>Próx. vencimento</th><th>Último pagamento</th><th>Acesso</th><th>Ações</th></tr></thead><tbody>';
     const fmtD = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    const btnAcao = (id, acao, rotulo, dias) =>
+      '<button class="fa-acao" data-id="' + id + '" data-acao="' + acao + '" data-dias="' + (dias||0) + '" ' +
+      'style="border:1px solid var(--linha);background:transparent;color:var(--titulo);border-radius:7px;padding:4px 9px;font-size:.74rem;font-weight:600;margin:2px 4px 2px 0;white-space:nowrap">' + rotulo + '</button>';
     rows.forEach(r => {
       const [rot, cor, fundo] = FA_ROTULOS[r.status] || [r.status, 'var(--cinza)', 'transparent'];
+      let acoes = '';
+      if (r.status !== 'cancelada') {
+        if (r.status === 'pendente' || r.status === 'atrasada') acoes += btnAcao(r.medico_id, 'estender', '+7d teste', 7) + btnAcao(r.medico_id, 'estender', '+30d', 30);
+        if (r.status !== 'isenta') acoes += btnAcao(r.medico_id, 'isentar', 'Isentar');
+        if (r.bloqueado) acoes += btnAcao(r.medico_id, 'desbloquear', 'Desbloquear');
+        acoes += btnAcao(r.medico_id, 'cancelar', 'Cancelar');
+      }
       html += '<tr><td><span class="med-nome">' + esc(r.medico_nome) + '</span><br><span class="med-crm">' + esc(r.medico_crm) + '</span></td>' +
         '<td><span style="font-size:.74rem;font-weight:600;color:' + cor + ';background:' + fundo + ';border-radius:99px;padding:3px 10px;white-space:nowrap">' + rot + '</span></td>' +
         '<td class="num">' + (r.valor ? brl(r.valor) : '—') + '</td>' +
         '<td>' + fmtD(r.proximo_vencimento) + '</td>' +
         '<td>' + fmtD(r.ultimo_pagamento_em) + '</td>' +
-        '<td>' + (r.bloqueado ? '🔒 bloqueado' : (r.medico_ativo ? 'liberado' : 'inativo')) + '</td></tr>';
+        '<td>' + (r.bloqueado ? '🔒 bloqueado' : (r.medico_ativo ? 'liberado' : 'inativo')) + '</td>' +
+        '<td>' + (acoes || '—') + '</td></tr>';
     });
     html += '</tbody></table>';
     corpo.innerHTML = html;
+    corpo.querySelectorAll('.fa-acao').forEach(b => b.addEventListener('click', () => faAcao(b)));
   }catch(err){
     corpo.innerHTML = '<div class="err-box">Falha ao carregar assinaturas:\n' + esc(err.message||err) + '</div>';
+  }
+}
+
+async function faAcao(btn){
+  const id = btn.dataset.id, acao = btn.dataset.acao, dias = Number(btn.dataset.dias) || 7;
+  const nome = btn.closest('tr').querySelector('.med-nome').textContent;
+  const confirmas = {
+    estender: 'Estender o teste de ' + nome + ' por ' + dias + ' dia(s) e liberar o acesso?',
+    isentar: 'Tornar a assinatura de ' + nome + ' ISENTA (sem cobrança, nunca bloqueia)?',
+    desbloquear: 'Liberar o acesso de ' + nome + '?',
+    cancelar: 'CANCELAR a assinatura de ' + nome + '? Isso também cancela a recorrência no Asaas. Esta ação não tem desfazer automático.'
+  };
+  if (!confirm(confirmas[acao])) return;
+  btn.disabled = true; const rotulo = btn.textContent; btn.textContent = '…';
+  try{
+    if (acao === 'cancelar') {
+      const { data: sess } = await sb.auth.getSession();
+      const r = await fetch(SUPABASE_URL + '/functions/v1/asaas-cancelar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.session.access_token, 'apikey': SUPABASE_ANON_KEY },
+        body: JSON.stringify({ medico_id: id })
+      });
+      const resp = await r.json();
+      if (!r.ok || !resp.ok) throw new Error(resp.erro || ('HTTP ' + r.status));
+      alert('Assinatura cancelada.' + (resp.avisos && resp.avisos.length ? '\nAvisos: ' + resp.avisos.join('; ') : ''));
+    } else {
+      const { data, error } = await sb.rpc('assinatura_gestao_acao', { p_medico_id: id, p_acao: acao, p_dias: dias });
+      if (error) throw new Error(error.message);
+      alert(data);
+    }
+    carregarAssinaturas();
+  }catch(err){
+    alert('Não foi possível executar: ' + (err.message || err));
+    btn.disabled = false; btn.textContent = rotulo;
   }
 }
 
