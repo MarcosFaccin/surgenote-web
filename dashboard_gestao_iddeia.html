@@ -270,8 +270,14 @@ let mfaFactorId = null;
 
 async function portaoMFA(session){
   const { data: aal, error } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-  if(error){ // se algo falhar na checagem, não trava o acesso do gestor legítimo
-    return abrir(session);
+  if(error){ // fail-closed: sem conseguir verificar o 2º fator, NÃO libera
+    $('view-login').hidden = true; $('view-mfa').hidden = false;
+    $('mfa-qr-area').hidden = true;
+    $('mfa-titulo').textContent = 'Verificação em duas etapas';
+    $('mfa-msg').className = 'msg err';
+    $('mfa-msg').textContent = 'Não foi possível verificar o 2º fator. Saia e entre novamente.';
+    await sb.auth.signOut();
+    return;
   }
   if(aal.currentLevel === 'aal2'){ return abrir(session); } // já verificado nesta sessão
   $('view-login').hidden = true;
