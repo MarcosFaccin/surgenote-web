@@ -310,6 +310,43 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .dt-item .rm{background:none;border:none;color:var(--vermelho);font-size:.95rem;padding:0 4px}
 .dt-pagamento{border-top:1px solid var(--linha);padding-top:14px}
 
+/* calendário da agenda (mês/semana) */
+.cal-tog{display:flex;border:1px solid var(--linha);border-radius:99px;overflow:hidden}
+.cal-tog button{border:none;background:transparent;color:var(--cinza);font-family:inherit;font-size:.8rem;font-weight:600;padding:6px 13px}
+.cal-tog button.ativa{background:var(--verde);color:#fff}
+.cal-tog button:not(.ativa):hover{background:var(--verde-tinta);color:var(--titulo)}
+.cal-cab-dias{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
+.cal-cab-dias span{text-align:center;font-size:.66rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--cinza)}
+.cal-grade{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-dia{min-height:88px;border:1px solid var(--linha);border-radius:8px;padding:4px 5px;background:var(--branco);overflow:hidden;cursor:pointer}
+.cal-dia:hover{border-color:var(--verde)}
+.cal-dia.fora{opacity:.38}
+.cal-num{font-size:.74rem;font-weight:600;color:var(--cinza);display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:50%}
+.cal-dia.hoje .cal-num{background:var(--verde);color:#fff}
+.cal-chip{display:block;font-size:.68rem;line-height:1.25;background:var(--verde-tinta);color:var(--titulo);border-radius:5px;padding:2px 5px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;border:none;width:100%;text-align:left;font-family:inherit}
+.cal-chip:hover{background:var(--verde);color:#fff}
+.cal-mais{display:block;font-size:.64rem;color:var(--cinza);margin-top:2px}
+.cal-sd{display:flex;gap:12px;padding:10px 2px;border-bottom:1px solid var(--linha)}
+.cal-sd:last-child{border-bottom:none}
+.cal-sd-data{flex-shrink:0;width:64px;text-align:center}
+.cal-sd-data .dia-sem{display:block;font-size:.64rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--cinza)}
+.cal-sd-data .dia-num{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;font-family:var(--display);font-weight:700;font-size:1.05rem;color:var(--titulo)}
+.cal-sd.hoje .dia-num{background:var(--verde);color:#fff}
+.cal-sd-evs{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;justify-content:center}
+.cal-sd-vazio{font-size:.8rem;color:var(--cinza);opacity:.6}
+.cal-ev{display:flex;align-items:baseline;gap:8px;background:var(--verde-tinta);border-radius:8px;padding:7px 10px;cursor:pointer;border:none;font-family:inherit;text-align:left;width:100%;min-width:0}
+.cal-ev:hover{background:var(--verde);color:#fff}
+.cal-ev:hover *{color:#fff!important}
+.cal-ev .hora{font-family:var(--mono);font-size:.76rem;color:var(--titulo);flex-shrink:0}
+.cal-ev .oq{font-size:.84rem;font-weight:600;color:var(--titulo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-ev .quem{font-size:.76rem;color:var(--cinza);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:640px){
+  .cal-dia{min-height:52px;padding:3px}
+  .cal-chip{font-size:0;height:7px;width:7px;min-width:7px;border-radius:50%;background:var(--verde);padding:0;margin:3px auto 0}
+  .cal-mais{text-align:center}
+  .cal-sd-data{width:48px}
+}
+
 /* trava biométrica — tela de entrada estilo app de banco, sempre petróleo SurgeNote */
 .bio-trava{
   position:fixed;inset:0;z-index:100;
@@ -610,6 +647,24 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
     </div>
 
     <div class="view" data-view="agenda">
+        <section class="painel" aria-label="Calendário de cirurgias" style="margin-bottom:16px">
+          <div class="painel-cab" style="flex-wrap:wrap;gap:8px;align-items:center">
+            <h2>Calendário</h2>
+            <span class="conta" id="cal-rotulo"></span>
+            <div style="flex:1"></div>
+            <div class="cal-tog" role="group" aria-label="Modo de visualização">
+              <button id="cal-modo-mes" class="ativa">Mês</button>
+              <button id="cal-modo-semana">Semana</button>
+            </div>
+            <div class="cal-tog" role="group" aria-label="Navegação do calendário">
+              <button id="cal-prev" title="Anterior">‹</button>
+              <button id="cal-hoje">Hoje</button>
+              <button id="cal-prox" title="Próximo">›</button>
+            </div>
+          </div>
+          <div class="painel-corpo" id="cal-corpo"></div>
+        </section>
+
         <section class="painel" aria-label="Agenda de cirurgias">
           <div class="painel-cab">
             <h2>Agenda</h2>
@@ -1013,6 +1068,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     $("rel-status").appendChild(op);
   });
   $("btn-rel-tela").addEventListener("click", relConferir);
+  $("cal-modo-mes").addEventListener("click", () => calDefinirModo("mes"));
+  $("cal-modo-semana").addEventListener("click", () => calDefinirModo("semana"));
+  $("cal-prev").addEventListener("click", () => calNavegar(-1));
+  $("cal-prox").addEventListener("click", () => calNavegar(1));
+  $("cal-hoje").addEventListener("click", () => { calAncora = new Date(); carregarCalendario(); });
   $("ag-novo-btn").addEventListener("click", () => { $("ag-form").hidden = !$("ag-form").hidden; });
   $("ag-cancelar").addEventListener("click", () => { $("ag-form").hidden = true; });
   $("ag-salvar").addEventListener("click", agCriar);
@@ -1755,7 +1815,123 @@ async function lcCriar(){
 }
 
 /* ---------- agenda ---------- */
+/* ---------- calendário (mês/semana) ---------- */
+let calAncora = new Date();
+let calModo = "mes";
+const CAL_DIAS_SEM = ["dom","seg","ter","qua","qui","sex","sáb"];
+
+function calChaveDia(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+
+async function carregarCalendario(){
+  const alvo = $("cal-corpo");
+  let ini, fim;
+  if (calModo === "mes") {
+    const primeiro = new Date(calAncora.getFullYear(), calAncora.getMonth(), 1);
+    ini = new Date(primeiro); ini.setDate(1 - primeiro.getDay());
+    fim = new Date(ini); fim.setDate(ini.getDate() + 42);
+    const rot = primeiro.toLocaleString("pt-BR", { month: "long", year: "numeric" });
+    $("cal-rotulo").textContent = rot.charAt(0).toUpperCase() + rot.slice(1);
+  } else {
+    ini = new Date(calAncora); ini.setHours(0,0,0,0); ini.setDate(ini.getDate() - ini.getDay());
+    fim = new Date(ini); fim.setDate(ini.getDate() + 7);
+    const fimVis = new Date(fim); fimVis.setDate(fim.getDate() - 1);
+    $("cal-rotulo").textContent = ini.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " a " + fimVis.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  }
+  try {
+    const { data: cirurgias, error } = await sb.from("vw_cirurgias_completa")
+      .select("id,nome_procedimento,paciente_nome,hospital_ref,hospital_nome,data_cirurgia,status")
+      .in("status", ["confirmada","realizada","paga"])
+      .gte("data_cirurgia", ini.toISOString())
+      .lt("data_cirurgia", fim.toISOString())
+      .order("data_cirurgia", { ascending: true });
+    if (error) throw error;
+    const porDia = {};
+    (cirurgias || []).forEach(c => {
+      const k = calChaveDia(new Date(c.data_cirurgia));
+      (porDia[k] = porDia[k] || []).push(c);
+    });
+    const hojeK = calChaveDia(new Date());
+    alvo.innerHTML = "";
+    if (calModo === "mes") {
+      const cab = document.createElement("div");
+      cab.className = "cal-cab-dias";
+      cab.innerHTML = CAL_DIAS_SEM.map(d => "<span>" + d + "</span>").join("");
+      alvo.appendChild(cab);
+      const grade = document.createElement("div");
+      grade.className = "cal-grade";
+      for (let i = 0; i < 42; i++) {
+        const d = new Date(ini); d.setDate(ini.getDate() + i);
+        const k = calChaveDia(d);
+        const cel = document.createElement("div");
+        cel.className = "cal-dia" + (d.getMonth() !== calAncora.getMonth() ? " fora" : "") + (k === hojeK ? " hoje" : "");
+        cel.innerHTML = '<span class="cal-num">' + d.getDate() + "</span>";
+        const evs = porDia[k] || [];
+        evs.slice(0, 3).forEach(c => {
+          const chip = document.createElement("button");
+          chip.className = "cal-chip";
+          const hora = new Date(c.data_cirurgia).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+          chip.textContent = hora + " " + (c.nome_procedimento || "cirurgia");
+          chip.title = (c.nome_procedimento || "") + " · " + (c.paciente_nome || "paciente n/d");
+          chip.addEventListener("click", (e) => { e.stopPropagation(); abrirDetalhe(c.id); });
+          cel.appendChild(chip);
+        });
+        if (evs.length > 3) {
+          const mais = document.createElement("span");
+          mais.className = "cal-mais";
+          mais.textContent = "+" + (evs.length - 3);
+          cel.appendChild(mais);
+        }
+        cel.addEventListener("click", () => { calAncora = d; calDefinirModo("semana"); });
+        grade.appendChild(cel);
+      }
+      alvo.appendChild(grade);
+    } else {
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(ini); d.setDate(ini.getDate() + i);
+        const k = calChaveDia(d);
+        const linha = document.createElement("div");
+        linha.className = "cal-sd" + (k === hojeK ? " hoje" : "");
+        linha.innerHTML = '<div class="cal-sd-data"><span class="dia-sem">' + CAL_DIAS_SEM[d.getDay()] + '</span><span class="dia-num">' + d.getDate() + '</span></div><div class="cal-sd-evs"></div>';
+        const evsEl = linha.querySelector(".cal-sd-evs");
+        const evs = porDia[k] || [];
+        if (!evs.length) {
+          evsEl.innerHTML = '<span class="cal-sd-vazio">—</span>';
+        } else {
+          evs.forEach(c => {
+            const ev = document.createElement("button");
+            ev.className = "cal-ev";
+            const hora = new Date(c.data_cirurgia).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+            ev.innerHTML = '<span class="hora"></span><span style="min-width:0"><span class="oq"></span><span class="quem" style="display:block"></span></span>';
+            ev.querySelector(".hora").textContent = hora;
+            ev.querySelector(".oq").textContent = c.nome_procedimento || "cirurgia";
+            ev.querySelector(".quem").textContent = (c.paciente_nome || "paciente n/d") + (c.hospital_ref || c.hospital_nome ? " · " + (c.hospital_ref || c.hospital_nome) : "");
+            ev.addEventListener("click", () => abrirDetalhe(c.id));
+            evsEl.appendChild(ev);
+          });
+        }
+        alvo.appendChild(linha);
+      }
+    }
+  } catch (e) {
+    alvo.innerHTML = '<div class="vazio">Calendário indisponível: ' + (e.message || e) + '</div>';
+  }
+}
+
+function calDefinirModo(modo){
+  calModo = modo;
+  $("cal-modo-mes").classList.toggle("ativa", modo === "mes");
+  $("cal-modo-semana").classList.toggle("ativa", modo === "semana");
+  carregarCalendario();
+}
+
+function calNavegar(passo){
+  if (calModo === "mes") calAncora = new Date(calAncora.getFullYear(), calAncora.getMonth() + passo, 1);
+  else { calAncora = new Date(calAncora); calAncora.setDate(calAncora.getDate() + passo * 7); }
+  carregarCalendario();
+}
+
 async function carregarAgenda(){
+  carregarCalendario();
   const alvo = $("agenda");
   try {
     const hoje = new Date(); hoje.setHours(0,0,0,0);
