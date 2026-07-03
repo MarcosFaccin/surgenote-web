@@ -740,6 +740,11 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
     </div>
 
     <div class="view" data-view="valores">
+    <section class="painel" aria-label="Minha assinatura" id="ma-painel" style="margin-bottom:16px" hidden>
+      <div class="painel-cab"><h2>Minha assinatura</h2><span class="conta" id="ma-selo"></span></div>
+      <div class="painel-corpo" id="ma-corpo"></div>
+    </section>
+
     <section class="painel" aria-label="Minha tabela de valores">
       <div class="painel-cab">
         <h2>Minha tabela de valores</h2>
@@ -1173,6 +1178,7 @@ function iniciarApp(sessao){
     aplicarPapel();
     bioTravarSePreciso();
     ligarGoogleAgenda();
+    carregarMinhaAssinatura();
   }
   carregarTudo();
 }
@@ -2628,6 +2634,62 @@ async function buscarProcedimentosTodos(termo){
   (prop.data || []).forEach(p => lista.push({ nome: p.nome, rotulo: p.categoria + " · " + brl.format(Number(p.valor)), valor: Number(p.valor), proprio: true }));
   (cat.data || []).forEach(p => lista.push({ nome: p.nome, rotulo: p.codigo + " · " + (p.tabela === "sus" ? "SUS" : "CBHPM"), proprio: false }));
   return lista;
+}
+
+/* ---------- minha assinatura (só o titular; equipe recebe vazio) ---------- */
+async function carregarMinhaAssinatura(){
+  try {
+    const { data: rows, error } = await sb.rpc("minha_assinatura");
+    if (error || !rows || !rows.length) return; // equipe ou sem assinatura: cartão fica oculto
+    const a = rows[0];
+    const painel = $("ma-painel"), selo = $("ma-selo"), corpo = $("ma-corpo");
+    const fmtD = d => d ? new Date(d + "T12:00:00").toLocaleDateString("pt-BR") : null;
+    const brl = n => (Number(n) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    const plano = "Plano Único — " + brl(a.valor || 149.90) + "/mês";
+    let seloTxt = "", seloCor = "", linhas = [], botao = null;
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const venc = a.proximo_vencimento ? new Date(a.proximo_vencimento + "T00:00:00") : null;
+    if (a.status === "isenta") {
+      seloTxt = "Conta isenta"; seloCor = "var(--petroleo)";
+      linhas = ["Conta de parceiro/teste — sem cobrança."];
+    } else if (a.status === "ativa") {
+      seloTxt = "Ativa"; seloCor = "var(--verde)";
+      linhas = [plano,
+        venc ? "Próxima cobrança: " + fmtD(a.proximo_vencimento) : null,
+        a.ultimo_pagamento_em ? "Último pagamento: " + fmtD(a.ultimo_pagamento_em) : null];
+    } else if (a.status === "atrasada") {
+      seloTxt = "Em atraso"; seloCor = "var(--vermelho)";
+      linhas = [plano, venc ? "Vencida desde " + fmtD(a.proximo_vencimento) + " — regularize para manter o acesso." : null];
+      if (a.link_pagamento) botao = ["Pagar agora", a.link_pagamento];
+    } else if (a.status === "cancelada") {
+      seloTxt = "Cancelada"; seloCor = "var(--cinza)";
+      linhas = ["Sua assinatura foi cancelada. Fale com a iddeia para reativar."];
+    } else { // pendente = trial
+      const diasRestantes = venc ? Math.ceil((venc - hoje) / 864e5) : null;
+      if (a.bloqueado || (diasRestantes !== null && diasRestantes < 0)) {
+        seloTxt = "Teste encerrado"; seloCor = "var(--vermelho)";
+        linhas = ["Seu período de teste terminou" + (venc ? " em " + fmtD(a.proximo_vencimento) : "") + ". Assine para continuar usando.", plano];
+        if (a.link_pagamento) botao = ["Assinar agora", a.link_pagamento];
+      } else {
+        seloTxt = "Período de teste"; seloCor = "var(--ambar)";
+        linhas = [diasRestantes !== null
+          ? "Teste gratuito: " + (diasRestantes === 0 ? "termina HOJE" : "restam " + diasRestantes + " dia(s), até " + fmtD(a.proximo_vencimento)) + "."
+          : "Você está no período de teste gratuito.", "Depois do teste: " + plano];
+        if (a.link_pagamento) botao = ["Assinar agora", a.link_pagamento];
+      }
+    }
+    selo.innerHTML = '<span style="font-size:.74rem;font-weight:600;color:#fff;background:' + seloCor + ';border-radius:99px;padding:3px 11px;white-space:nowrap">' + seloTxt + "</span>";
+    corpo.innerHTML = linhas.filter(Boolean).map(l => '<p style="font-size:.88rem;margin:0 0 6px">' + escHtml(l) + "</p>").join("");
+    if (botao) {
+      const btn = document.createElement("a");
+      btn.className = "btn btn-confirmar";
+      btn.style.cssText = "text-decoration:none;margin-top:6px";
+      btn.textContent = botao[0];
+      btn.href = botao[1]; btn.target = "_blank"; btn.rel = "noopener";
+      corpo.appendChild(btn);
+    }
+    painel.hidden = false;
+  } catch (e) { /* cartão é informativo; falha não bloqueia o painel */ }
 }
 
 /* ---------- biometria (trava local do aparelho, WebAuthn) ---------- */
