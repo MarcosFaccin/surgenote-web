@@ -254,6 +254,15 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .painel-cab .recarregar{margin-left:auto;background:none;border:none;color:var(--verde);font-size:.82rem;font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .painel-corpo{padding:10px 16px 14px}
 .painel-corpo:has(> table),.painel-corpo > div:has(> table){overflow-x:auto}
+/* base das tabelas geradas (radar, comparador etc.) — sem isto as colunas colam no desktop */
+.painel-corpo table{width:100%;border-collapse:collapse;font-size:.88rem}
+.painel-corpo thead th,.painel-corpo tbody td{padding:9px 16px;text-align:left;vertical-align:middle;white-space:nowrap}
+.painel-corpo thead th{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--cinza);font-weight:600;border-bottom:1px solid var(--linha)}
+.painel-corpo tbody td{border-bottom:1px solid var(--linha)}
+.painel-corpo tbody tr:last-child td{border-bottom:none}
+.painel-corpo thead th.num,.painel-corpo tbody td.num{text-align:right;font-variant-numeric:tabular-nums}
+.painel-corpo thead th:first-child,.painel-corpo tbody td:first-child{padding-left:2px}
+.painel-corpo thead th:last-child,.painel-corpo tbody td:last-child{padding-right:2px}
 
 /* fila — assinatura visual */
 .cartao{position:relative;border:1px solid var(--linha);border-left:4px solid var(--ambar);border-radius:8px;padding:16px 16px 14px;margin-top:12px;background:var(--branco);transition:background .4s}
