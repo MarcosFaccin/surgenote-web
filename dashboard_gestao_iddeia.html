@@ -206,6 +206,11 @@ tbody tr:last-child td{border-bottom:none}
       </div>
     </section>
 
+    <section class="painel" style="margin-top:16px" id="lt-painel" hidden>
+      <div class="painel-cab"><h2>Lançamentos travados</h2><span class="conta" id="lt-conta"></span></div>
+      <div class="painel-corpo" id="lt-corpo"></div>
+    </section>
+
     <section class="painel" style="margin-top:16px">
       <div class="painel-cab"><h2>Financeiro das assinaturas (Asaas)</h2><span class="conta" id="fa-conta"></span></div>
       <div class="painel-corpo" id="fa-corpo"><div class="vazio">Carregando assinaturas…</div></div>
@@ -262,6 +267,62 @@ async function carregar(){
     body.innerHTML = '<div class="err-box">Falha ao carregar:\n' + esc(err.message||err) + '</div>';
   }
   carregarAssinaturas();
+  carregarTravados();
+}
+
+// ---------- LANÇAMENTOS TRAVADOS (rede de segurança C4) ----------
+async function carregarTravados(){
+  const painel = $('lt-painel'), corpo = $('lt-corpo');
+  try{
+    const { data: rows, error } = await sb.rpc('lancamentos_travados');
+    if(error) throw new Error(error.message);
+    if(!rows || !rows.length){ painel.hidden = true; return; }  // sem travados: seção some
+    painel.hidden = false;
+    $('lt-conta').textContent = rows.length + ' travado(s)';
+    const fmtDH = d => new Date(d).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    let html = '<p style="font-size:.82rem;color:var(--cinza);margin-bottom:12px">Mensagens que entraram mas o processamento não concluiu (IA/banco falhou no meio). Reprocesse para reenviar ao Lançador, ou descarte se foi engano/lixo.</p>';
+    html += '<table><thead><tr><th>Quando</th><th>Telefone</th><th>Tipo</th><th>Conteúdo</th><th>Ações</th></tr></thead><tbody>';
+    rows.forEach(r => {
+      html += '<tr><td>' + fmtDH(r.recebido_em) + '</td>' +
+        '<td>' + esc(r.telefone) + '</td><td>' + esc(r.tipo) + '</td>' +
+        '<td>' + esc((r.resumo||'').slice(0,80)) + '</td>' +
+        '<td style="white-space:nowrap">' +
+          '<button class="lt-repro" data-id="' + esc(r.message_id) + '" style="border:1px solid var(--verde);background:transparent;color:var(--titulo);border-radius:7px;padding:4px 9px;font-size:.74rem;font-weight:600;margin-right:6px">Reprocessar</button>' +
+          '<button class="lt-desc" data-id="' + esc(r.message_id) + '" style="border:1px solid var(--linha);background:transparent;color:var(--cinza);border-radius:7px;padding:4px 9px;font-size:.74rem">Descartar</button>' +
+        '</td></tr>';
+    });
+    html += '</tbody></table>';
+    corpo.innerHTML = html;
+    corpo.querySelectorAll('.lt-repro').forEach(b => b.addEventListener('click', () => ltReprocessar(b)));
+    corpo.querySelectorAll('.lt-desc').forEach(b => b.addEventListener('click', () => ltDescartar(b)));
+  }catch(err){ painel.hidden = false; corpo.innerHTML = '<div class="err-box">Falha ao carregar travados:\n' + esc(err.message||err) + '</div>'; }
+}
+
+async function ltReprocessar(btn){
+  if(!confirm('Reenviar esta mensagem ao Lançador para reprocessar?')) return;
+  btn.disabled = true; const t = btn.textContent; btn.textContent = '…';
+  try{
+    const { data: sess } = await sb.auth.getSession();
+    const r = await fetch(SUPABASE_URL + '/functions/v1/reprocessar-lancamento', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + sess.session.access_token, 'apikey': SUPABASE_ANON_KEY },
+      body: JSON.stringify({ message_id: btn.dataset.id })
+    });
+    const resp = await r.json();
+    if(!r.ok || !resp.ok) throw new Error(resp.erro || ('HTTP ' + r.status));
+    alert('Reenviado ao Lançador (tentativa ' + resp.tentativa + '). Acompanhe se a cirurgia aparece na fila de confirmação.');
+    carregarTravados();
+  }catch(err){ alert('Não foi possível reprocessar: ' + (err.message||err)); btn.disabled = false; btn.textContent = t; }
+}
+
+async function ltDescartar(btn){
+  if(!confirm('Descartar esta mensagem? (use só se foi engano/lixo, não uma cirurgia real)')) return;
+  btn.disabled = true;
+  try{
+    const { error } = await sb.rpc('lancamento_descartar', { p_message_id: btn.dataset.id });
+    if(error) throw new Error(error.message);
+    carregarTravados();
+  }catch(err){ alert('Não foi possível descartar: ' + (err.message||err)); btn.disabled = false; }
 }
 
 // ---------- ASSINATURAS (Asaas) ----------
