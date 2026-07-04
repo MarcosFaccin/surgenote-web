@@ -2803,6 +2803,57 @@ async function ppCriar(){
 }
 
 /* busca unificada: catálogo oficial + próprios (para agendamento e composição) */
+/* ---------- MODO CONSULTA (free / teste encerrado): só consulta às tabelas ---------- */
+function modoConsulta(linkPagamento){
+  if (document.getElementById("mc-overlay")) return;
+  const ov = document.createElement("div");
+  ov.id = "mc-overlay";
+  ov.style.cssText = "position:fixed;inset:0;z-index:9998;background:#0E2A36;overflow:auto;padding:22px 16px";
+  ov.innerHTML =
+    '<div style="max-width:640px;margin:0 auto;color:#fff;font-family:inherit">' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><img src="icon-192.png" alt="" style="width:36px;height:36px;border-radius:9px"><b style="font-size:1.05rem">SurgeNote</b><span style="font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#E89B1C;border:1px solid rgba(232,155,28,.45);border-radius:99px;padding:3px 10px;margin-left:auto">Modo consulta</span></div>' +
+      '<h2 style="font-size:1.3rem;margin:0 0 6px">Seu período de teste terminou.</h2>' +
+      '<p style="color:rgba(255,255,255,.75);font-size:.92rem;margin:0 0 14px;line-height:1.5">O registro de cirurgias, o financeiro e a agenda estão pausados — seus dados estão guardados e voltam na hora se você assinar. Enquanto isso, a <b style="color:#fff">consulta às tabelas CBHPM/SUS continua liberada</b>:</p>' +
+      (linkPagamento ? '<a href="' + linkPagamento.replace(/"/g,"&quot;") + '" target="_blank" style="display:inline-block;background:#E89B1C;color:#1A140A;font-weight:700;border-radius:10px;padding:12px 22px;text-decoration:none;margin-bottom:20px">Assinar e reativar tudo</a>' : '<p style="font-size:.85rem;color:rgba(255,255,255,.6);margin-bottom:20px">Para assinar, fale com contato@iddeia.com.br</p>') +
+      '<div style="background:#fff;color:#1A211F;border-radius:14px;padding:16px 18px">' +
+        '<label style="display:block;font-size:.8rem;color:#5A6763;margin-bottom:6px">Buscar procedimento (nome ou código)</label>' +
+        '<input id="mc-busca" autocomplete="off" placeholder="ex.: colecistectomia" style="width:100%;padding:11px 12px;border:1px solid #DCE3DF;border-radius:9px;font-size:1rem;font-family:inherit">' +
+        '<div id="mc-resultados" style="overflow-x:auto;margin-top:10px"></div>' +
+      '</div>' +
+      '<p style="font-size:.75rem;color:rgba(255,255,255,.45);margin-top:14px">Valores de referência (CBHPM/SUS) — não substituem a tabela contratual de cada convênio.</p>' +
+    '</div>';
+  document.body.appendChild(ov);
+  let tmr = null;
+  document.getElementById("mc-busca").addEventListener("input", () => {
+    clearTimeout(tmr); tmr = setTimeout(mcBuscar, 350);
+  });
+}
+async function mcBuscar(){
+  const termo = (document.getElementById("mc-busca").value || "").trim();
+  const alvo = document.getElementById("mc-resultados");
+  if (termo.length < 3) { alvo.innerHTML = ""; return; }
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+  const t = termo.replace(/[%,]/g, "");
+  const { data, error } = await sb.from("procedimentos")
+    .select("codigo, nome, tabela, porte, valor_porte, valor_sus")
+    .eq("ativo", true)
+    .or("nome.ilike.%" + t + "%,codigo.ilike.%" + t + "%")
+    .order("nome").limit(20);
+  if (error) { alvo.innerHTML = '<p style="color:#C2543F;font-size:.85rem">Erro: ' + esc(error.message) + '</p>'; return; }
+  if (!data || !data.length) { alvo.innerHTML = '<p style="color:#5A6763;font-size:.85rem">Nada encontrado para "' + esc(termo) + '".</p>'; return; }
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:.84rem;min-width:480px">';
+  data.forEach(p => {
+    const sus = p.tabela === "sus";
+    const valor = sus ? p.valor_sus : p.valor_porte;
+    html += '<tr style="border-top:1px solid #DCE3DF">' +
+      '<td style="padding:7px 8px;white-space:nowrap">' + esc(p.codigo) + '</td>' +
+      '<td style="padding:7px 8px">' + esc(p.nome) + '</td>' +
+      '<td style="padding:7px 8px">' + (sus ? "SUS" : "CBHPM") + '</td>' +
+      '<td style="padding:7px 8px;text-align:right;white-space:nowrap;font-weight:600">' + (valor != null ? brl.format(Number(valor)) : "—") + '</td></tr>';
+  });
+  alvo.innerHTML = html + '</table>';
+}
+
 /* ---------- consulta às tabelas CBHPM/SUS (só leitura, p/ guias manuais) ---------- */
 let ctTimer = null;
 document.getElementById("ct-busca")?.addEventListener("input", () => {
@@ -2863,7 +2914,9 @@ async function carregarMinhaAssinatura(){
     const painel = $("ma-painel"), selo = $("ma-selo"), corpo = $("ma-corpo");
     const fmtD = d => d ? new Date(d + "T12:00:00").toLocaleDateString("pt-BR") : null;
     const brl = n => (Number(n) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-    const plano = "Plano Único — " + brl(a.valor || 149.90) + "/mês";
+    const ciclos = { mensal:["Mensal","/mês"], trimestral:["Trimestral","/trimestre"], semestral:["Semestral","/semestre"], anual:["Anual","/ano"], pioneiro:["Pioneiro","/mês"] };
+    const cic = ciclos[a.plano] || ["Mensal","/mês"];
+    const plano = "Plano " + cic[0] + " — " + brl(a.valor || 98.90) + cic[1];
     let seloTxt = "", seloCor = "", linhas = [], botao = null;
     const hoje = new Date(); hoje.setHours(0,0,0,0);
     const venc = a.proximo_vencimento ? new Date(a.proximo_vencimento + "T00:00:00") : null;
@@ -2886,16 +2939,18 @@ async function carregarMinhaAssinatura(){
       const diasRestantes = venc ? Math.ceil((venc - hoje) / 864e5) : null;
       if (a.bloqueado || (diasRestantes !== null && diasRestantes < 0)) {
         seloTxt = "Teste encerrado"; seloCor = "var(--vermelho)";
-        linhas = ["Seu período de teste terminou" + (venc ? " em " + fmtD(a.proximo_vencimento) : "") + ". Assine para continuar usando.", plano];
+        linhas = ["Seu período de teste terminou" + (venc ? " em " + fmtD(a.proximo_vencimento) : "") + ". Assine para continuar usando — a consulta às tabelas segue liberada.", plano];
         if (a.link_pagamento) botao = ["Assinar agora", a.link_pagamento];
       } else {
         seloTxt = "Período de teste"; seloCor = "var(--ambar)";
         linhas = [diasRestantes !== null
           ? "Teste gratuito: " + (diasRestantes === 0 ? "termina HOJE" : "restam " + diasRestantes + " dia(s), até " + fmtD(a.proximo_vencimento)) + "."
-          : "Você está no período de teste gratuito.", "Depois do teste: " + plano];
+          : "Você está no período de teste gratuito.", "Depois do teste: planos a partir de R$ 59,90/mês (anual)."];
         if (a.link_pagamento) botao = ["Assinar agora", a.link_pagamento];
       }
     }
+    // Modo consulta (free): conta bloqueada mantém APENAS a consulta às tabelas
+    if (a.bloqueado) modoConsulta(a.link_pagamento);
     selo.innerHTML = '<span style="font-size:.74rem;font-weight:600;color:#fff;background:' + seloCor + ';border-radius:99px;padding:3px 11px;white-space:nowrap">' + seloTxt + "</span>";
     corpo.innerHTML = linhas.filter(Boolean).map(l => '<p style="font-size:.88rem;margin:0 0 6px">' + escHtml(l) + "</p>").join("");
     if (botao) {
