@@ -772,6 +772,24 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
       <div class="painel-corpo" id="ma-corpo"></div>
     </section>
 
+    <section class="painel" aria-label="Consulta às tabelas" style="margin-bottom:16px">
+      <div class="painel-cab">
+        <h2>Consulta às tabelas (CBHPM/SUS)</h2>
+        <span class="conta" id="ct-conta"></span>
+      </div>
+      <div class="painel-corpo">
+        <p style="font-size:.84rem;color:var(--cinza);margin-bottom:12px">
+          Busque por nome ou código e veja o valor de referência — útil para preencher guias manuais.
+          (Consulta apenas: para definir o seu valor, use "Minha tabela de valores" abaixo.)
+        </p>
+        <label class="campo" style="max-width:520px">
+          <span>Buscar procedimento (nome ou código)</span>
+          <input id="ct-busca" placeholder="ex.: colecistectomia ou 3.10.05.47-0" autocomplete="off">
+        </label>
+        <div id="ct-resultados" style="overflow-x:auto"></div>
+      </div>
+    </section>
+
     <section class="painel" aria-label="Minha tabela de valores">
       <div class="painel-cab">
         <h2>Minha tabela de valores</h2>
@@ -2785,6 +2803,45 @@ async function ppCriar(){
 }
 
 /* busca unificada: catálogo oficial + próprios (para agendamento e composição) */
+/* ---------- consulta às tabelas CBHPM/SUS (só leitura, p/ guias manuais) ---------- */
+let ctTimer = null;
+document.getElementById("ct-busca")?.addEventListener("input", () => {
+  clearTimeout(ctTimer);
+  ctTimer = setTimeout(consultarTabelas, 350);
+});
+async function consultarTabelas(){
+  const termo = (document.getElementById("ct-busca").value || "").trim();
+  const alvo = document.getElementById("ct-resultados");
+  const conta = document.getElementById("ct-conta");
+  if (termo.length < 3) { alvo.innerHTML = ""; conta.textContent = ""; return; }
+  const t = termo.replace(/[%,]/g, "");
+  const { data, error } = await sb.from("procedimentos")
+    .select("codigo, nome, tabela, porte, valor_porte, valor_sus, porte_anestesico, num_auxiliares")
+    .eq("ativo", true)
+    .or("nome.ilike.%" + t + "%,codigo.ilike.%" + t + "%")
+    .order("nome").limit(30);
+  if (error) { alvo.innerHTML = '<p style="color:var(--vermelho);font-size:.85rem">Erro na consulta: ' + error.message + '</p>'; return; }
+  if (!data || !data.length) { alvo.innerHTML = '<p style="color:var(--cinza);font-size:.85rem">Nada encontrado para "' + termo + '".</p>'; conta.textContent = "0"; return; }
+  conta.textContent = data.length + (data.length === 30 ? "+" : "");
+  const esc = s => String(s ?? "").replace(/[<>&"]/g, c => ({ "<":"&lt;", ">":"&gt;", "&":"&amp;", '"':"&quot;" }[c]));
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:.84rem;min-width:640px">' +
+    '<tr style="color:var(--cinza);text-align:left"><th style="padding:6px 8px">Código</th><th style="padding:6px 8px">Procedimento</th><th style="padding:6px 8px">Tabela</th><th style="padding:6px 8px">Porte</th><th style="padding:6px 8px">Aux.</th><th style="padding:6px 8px;text-align:right">Valor ref.</th></tr>';
+  data.forEach(p => {
+    const sus = p.tabela === "sus";
+    const valor = sus ? p.valor_sus : p.valor_porte;
+    html += '<tr style="border-top:1px solid var(--linha)">' +
+      '<td style="padding:6px 8px;white-space:nowrap;font-variant-numeric:tabular-nums">' + esc(p.codigo) + '</td>' +
+      '<td style="padding:6px 8px">' + esc(p.nome) + '</td>' +
+      '<td style="padding:6px 8px">' + (sus ? "SUS" : "CBHPM") + '</td>' +
+      '<td style="padding:6px 8px">' + esc(p.porte || "—") + (p.porte_anestesico ? ' <span style="color:var(--cinza)">(anest. ' + esc(p.porte_anestesico) + ')</span>' : '') + '</td>' +
+      '<td style="padding:6px 8px">' + (p.num_auxiliares ?? "—") + '</td>' +
+      '<td style="padding:6px 8px;text-align:right;white-space:nowrap;font-weight:600">' + (valor != null ? brl.format(Number(valor)) : "—") + '</td>' +
+      '</tr>';
+  });
+  alvo.innerHTML = html + '</table>' +
+    '<p style="font-size:.75rem;color:var(--cinza);margin-top:8px">Valores de referência (CBHPM/SUS) — não substituem a tabela contratual de cada convênio.</p>';
+}
+
 async function buscarProcedimentosTodos(termo){
   const t = termo.replace(/[%,]/g, "");
   const [cat, prop] = await Promise.all([
