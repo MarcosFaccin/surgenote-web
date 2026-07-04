@@ -87,6 +87,10 @@ body{font-family:var(--corpo);background:var(--papel);color:var(--grafite);line-
         <label class="campo"><span>E-mail (será seu login) *</span><input id="f-email" type="email" autocomplete="email" placeholder="voce@exemplo.com"></label>
         <label class="campo"><span>Senha * (mínimo 8 caracteres)</span><input id="f-senha" type="password" autocomplete="new-password" placeholder="••••••••"></label>
         <label class="campo hp" aria-hidden="true">Site<input id="f-site" tabindex="-1" autocomplete="off"></label>
+        <label style="display:flex;gap:10px;align-items:flex-start;margin:14px 0;font-size:.9rem;cursor:pointer">
+          <input type="checkbox" id="f-aceite" style="margin-top:3px;width:16px;height:16px;accent-color:var(--marca)">
+          <span>Li e aceito os <a href="termos.html" target="_blank">Termos de Uso</a> e a <a href="privacidade.html" target="_blank">Política de Privacidade</a> do SurgeNote.</span>
+        </label>
         <button class="btn" id="f-btn">Criar conta</button>
         <div class="msg" id="f-msg"></div>
         <p class="lgpd">Seus dados são usados apenas para operar o serviço e ficam isolados na sua conta (LGPD). Nada de paciente passa por aqui.</p>
@@ -120,11 +124,17 @@ async function criarConta(){
     telefone: $('f-tel').value.trim(),
     email: $('f-email').value.trim(),
     senha: $('f-senha').value,
-    site: $('f-site').value
+    site: $('f-site').value,
+    aceite: $('f-aceite').checked
   };
   if(!dados.nome || !dados.crm || !dados.telefone || !dados.email || dados.senha.length < 8){
     msg.className = 'msg err';
     msg.textContent = 'Preencha nome, CRM, WhatsApp, e-mail e senha (mín. 8 caracteres).';
+    return;
+  }
+  if(!dados.aceite){
+    msg.className = 'msg err';
+    msg.textContent = 'Para criar a conta, é preciso aceitar os Termos de Uso e a Política de Privacidade.';
     return;
   }
   const btn = $('f-btn');

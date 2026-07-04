@@ -4,7 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Política de Privacidade — SurgeNote</title>
+<meta name="description" content="Política de Privacidade do SurgeNote: quais dados coletamos, onde ficam, com quem compartilhamos, por quanto tempo guardamos e como exercer seus direitos (LGPD).">
+<link rel="canonical" href="https://surgenote.com.br/privacidade.html">
 <meta name="theme-color" content="#0E2A36">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,13 +22,18 @@ body{font-family:var(--corpo);background:var(--papel);color:var(--grafite);line-
 .topo img{width:30px;height:30px;border-radius:8px}
 .wrap{max-width:760px;margin:0 auto;padding:48px 24px 80px}
 h1{font-family:var(--display);font-size:2rem;color:var(--escuro)}
-h2{font-family:var(--display);font-size:1.2rem;color:var(--escuro);margin:28px 0 6px}
+h2{font-family:var(--display);font-size:1.2rem;color:var(--escuro);margin:34px 0 8px}
+.versao{color:var(--cinza);font-size:.88rem;margin-top:6px}
 .aviso{background:#fff;border:1px solid var(--linha);border-left:4px solid var(--laranja);border-radius:0 10px 10px 0;padding:18px 20px;margin:22px 0;color:var(--cinza)}
 .aviso b{color:var(--escuro)}
-p{margin:12px 0;color:#333}
-ul{margin:10px 0 10px 22px;color:#333}
-li{margin:5px 0}
-a.voltar{color:var(--marca);font-weight:600;text-decoration:none}
+p,li{margin:12px 0;color:#333}
+ul{padding-left:22px}
+a{color:var(--marca)}
+a.voltar{font-weight:600;text-decoration:none}
+.tabela{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;background:#fff;font-size:.9rem}
+th,td{border:1px solid var(--linha);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:#eef2f0;color:var(--escuro);font-weight:600}
 footer{color:var(--cinza);font-size:.82rem;border-top:1px solid var(--linha);margin-top:40px;padding-top:18px}
 </style>
 </head>
@@ -33,53 +41,119 @@ footer{color:var(--cinza);font-size:.82rem;border-top:1px solid var(--linha);mar
 <div class="topo"><a href="/"><img src="icon-192.png" alt="">SurgeNote</a></div>
 <div class="wrap">
   <h1>Política de Privacidade</h1>
+  <p class="versao">Versão 1.0 (minuta) — 3 de julho de 2026</p>
   <div class="aviso">
-    <b>Documento em elaboração.</b> A Política de Privacidade definitiva, em
-    conformidade com a LGPD, está sendo preparada com apoio jurídico e estará
-    disponível aqui antes da contratação de qualquer plano pago. O resumo
-    abaixo descreve, de boa-fé, como tratamos os dados hoje.
+    <b>Minuta em revisão jurídica.</b> Esta política descreve com fidelidade o
+    tratamento de dados feito hoje pela plataforma, mas está em revisão por
+    assessoria jurídica especializada. A versão definitiva será publicada nesta
+    página.
   </div>
 
-  <h2>Quem somos</h2>
-  <p>O SurgeNote é um produto da iddeia. Tratamos dados para operar a gestão
-  cirúrgica do médico assinante.</p>
-
-  <h2>Que dados tratamos</h2>
+  <h2>1. Quem somos e papéis na LGPD</h2>
+  <p>O SurgeNote é operado pela <b>iddeia</b> (contato:
+  <a href="mailto:contato@iddeia.com.br">contato@iddeia.com.br</a>).</p>
   <ul>
-    <li><b>Do médico:</b> nome, CRM, especialidade, telefone, e-mail e dados de
-    assinatura.</li>
-    <li><b>Dos pacientes (dado sensível de saúde):</b> nome, procedimento, data,
-    hospital, convênio e valores — inseridos pelo próprio médico, que é o
-    controlador desses dados. Não coletamos prontuário clínico completo.</li>
-    <li><b>Da equipe:</b> nome, e-mail e telefone de secretária/instrumentador
-    com acesso concedido pelo médico.</li>
+    <li>Para os <b>dados de cadastro do médico</b> (cliente da plataforma), a
+    iddeia atua como <b>controladora</b>.</li>
+    <li>Para os <b>dados de pacientes</b> inseridos pelo médico, o <b>médico é
+    o controlador</b> e a iddeia atua como <b>operadora</b>, tratando esses
+    dados exclusivamente para prestar o serviço contratado.</li>
   </ul>
 
-  <h2>Como protegemos</h2>
+  <h2>2. Quais dados coletamos</h2>
+  <p><b>Do médico:</b> nome, CRM, telefone (WhatsApp), e-mail, senha (guardada
+  de forma cifrada/hash), preferências visuais (tema, cor, logomarca) e dados de
+  assinatura. Dados de pagamento (cartão/boleto/Pix) são tratados diretamente
+  pela Asaas — não armazenamos dados de cartão.</p>
+  <p><b>De pacientes (dados sensíveis de saúde, inseridos pelo médico):</b>
+  nome do paciente, procedimento, data, hospital, convênio e valores. Também
+  processamos o conteúdo ditado pelo médico (áudio, texto ou imagem do boletim
+  cirúrgico), que pode conter o nome do paciente. <b>Não coletamos</b> CPF,
+  endereço, diagnóstico detalhado nem prontuário do paciente — apenas o
+  necessário ao registro de produção e cobrança do médico. O paciente não tem
+  acesso à plataforma.</p>
+  <p><b>Da equipe do médico:</b> nome, e-mail e telefone dos membros que o
+  médico autorizar (ex.: secretária).</p>
+
+  <h2>3. Para que usamos</h2>
   <ul>
-    <li>Isolamento por médico no banco de dados (cada um só acessa o seu).</li>
-    <li>Verificação em duas etapas para acessos administrativos.</li>
-    <li>Expurgo automático de históricos de conversa após 7 dias.</li>
-    <li>O painel de gestão da iddeia vê apenas números agregados e anônimos,
-    sem dados de paciente.</li>
+    <li>Registrar e organizar a produção cirúrgica e os honorários do médico.</li>
+    <li>Transcrever áudios e ler imagens de boletim com inteligência artificial
+    para estruturar o registro.</li>
+    <li>Calcular honorários de referência (CBHPM/SUS ou tabela própria).</li>
+    <li>Enviar notificações pelo WhatsApp (confirmações, lembretes de agenda,
+    radar de cobrança, resumo mensal) — com opção de <b>modo discreto</b>, sem
+    valores nas mensagens.</li>
+    <li>Sincronizar cirurgias com a Google Agenda, quando o médico conectar a
+    própria conta.</li>
+    <li>Cobrar a assinatura e prestar suporte.</li>
+  </ul>
+  <p>Não vendemos dados pessoais nem os usamos para publicidade.</p>
+
+  <h2>4. Com quem compartilhamos (sub-operadores)</h2>
+  <div class="tabela">
+  <table>
+    <tr><th>Serviço</th><th>Para quê</th><th>Dados envolvidos</th><th>Local</th></tr>
+    <tr><td>Supabase</td><td>banco de dados e autenticação</td><td>todos os dados da plataforma</td><td>EUA</td></tr>
+    <tr><td>OpenAI</td><td>transcrição de áudio, leitura de imagem e estruturação por IA</td><td>conteúdo ditado (pode conter nome de paciente)</td><td>EUA</td></tr>
+    <tr><td>Google</td><td>agenda (apenas se o médico conectar)</td><td>procedimento, data e nome no título do evento</td><td>EUA</td></tr>
+    <tr><td>Evolution API / n8n (Cloudfy)</td><td>ponte com o WhatsApp e automações</td><td>mensagens, áudios e imagens enviados</td><td>Brasil</td></tr>
+    <tr><td>Asaas</td><td>cobrança da assinatura</td><td>dados do médico (nunca de paciente)</td><td>Brasil</td></tr>
+    <tr><td>Hostinger/EasyPanel</td><td>hospedagem do site</td><td>nenhum dado sensível (páginas estáticas)</td><td>Brasil</td></tr>
+  </table>
+  </div>
+  <p><b>Transferência internacional:</b> parte dos dados, inclusive dados
+  sensíveis de saúde, é processada em servidores nos Estados Unidos (Supabase,
+  OpenAI e Google), com salvaguardas contratuais desses fornecedores. Este é um
+  dos pontos em validação na revisão jurídica em curso (LGPD, art. 33).</p>
+
+  <h2>5. Por quanto tempo guardamos</h2>
+  <ul>
+    <li><b>Histórico das conversas de ditado (WhatsApp):</b> apagado
+    automaticamente após <b>7 dias</b>.</li>
+    <li><b>Fichas técnicas de acompanhamento de mensagens:</b> apagadas após
+    <b>30 dias</b>.</li>
+    <li><b>Registros de cirurgias, pagamentos e glosas:</b> mantidos enquanto a
+    conta do médico existir, por serem os dados de negócio do próprio médico.</li>
+    <li><b>Ao encerrar a conta:</b> os dados são excluídos, ressalvada a
+    retenção exigida por obrigações legais (fiscais/contábeis).</li>
   </ul>
 
-  <h2>Com quem compartilhamos</h2>
-  <p>Usamos serviços de terceiros (operadores) estritamente para operar a
-  plataforma — processamento por inteligência artificial, banco de dados,
-  agenda e cobrança. A relação com cada operador é regida por contrato. A lista
-  completa e as bases legais para eventuais transferências internacionais
-  constarão da versão definitiva.</p>
+  <h2>6. Como protegemos</h2>
+  <ul>
+    <li>Isolamento por médico no banco de dados (cada médico só acessa os
+    próprios dados), com regras aplicadas no servidor.</li>
+    <li>O painel administrativo da iddeia vê apenas números <b>agregados e
+    anônimos</b> — nunca dados de paciente — e exige verificação em duas etapas.</li>
+    <li>Chaves de servidor nunca ficam no navegador; comunicação cifrada
+    (HTTPS).</li>
+    <li>Trava biométrica local opcional no aparelho do médico e modo discreto
+    nas notificações.</li>
+  </ul>
 
-  <h2>Seus direitos</h2>
-  <p>Você pode solicitar acesso, correção ou exclusão dos seus dados pelo
-  e-mail abaixo. O canal do titular e o encarregado (DPO) serão indicados na
-  versão definitiva.</p>
+  <h2>7. Seus direitos (LGPD)</h2>
+  <p>Você pode solicitar confirmação de tratamento, acesso, correção,
+  portabilidade, exclusão e informações sobre compartilhamento dos seus dados,
+  além de revogar consentimentos. Pacientes que desejarem exercer direitos
+  sobre registros feitos por seu médico podem contatar diretamente o médico
+  (controlador) ou nosso canal abaixo, que encaminhará a solicitação.</p>
+  <p><b>Canal do titular:</b>
+  <a href="mailto:contato@iddeia.com.br">contato@iddeia.com.br</a>.
+  Respondemos no prazo legal. A indicação formal de Encarregado (DPO) será
+  publicada nesta página na versão definitiva.</p>
 
-  <p>Contato: <a href="mailto:contato@iddeia.com.br">contato@iddeia.com.br</a>.</p>
+  <h2>8. Cookies e armazenamento local</h2>
+  <p>Não usamos cookies de publicidade nem rastreadores de terceiros. O painel
+  guarda no seu navegador apenas o necessário para funcionamento: sessão de
+  login, preferências visuais e a trava biométrica local, quando ativada.</p>
+
+  <h2>9. Alterações</h2>
+  <p>Esta política pode ser atualizada. Mudanças relevantes serão comunicadas
+  por e-mail ou WhatsApp e a versão vigente estará sempre nesta página.</p>
+
   <p><a class="voltar" href="/">← Voltar ao site</a></p>
-  <footer>SurgeNote é um produto da iddeia. Última atualização: em elaboração
-  (resumo de boa-fé; versão jurídica em preparação).</footer>
+  <footer>SurgeNote é um produto da iddeia · Versão 1.0 (minuta) de 03/07/2026 —
+  sujeita a revisão jurídica antes da versão definitiva.</footer>
 </div>
 </body>
 </html>
