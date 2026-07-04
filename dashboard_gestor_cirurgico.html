@@ -1277,9 +1277,48 @@ function iniciarApp(sessao){
     bioTravarSePreciso();
     ligarGoogleAgenda();
     carregarMinhaAssinatura();
+    verificarAceite();
     setTimeout(mostrarGuiaInstalar, 2500);  // guia de instalação (após o app assentar)
   }
   carregarTudo();
+}
+
+/* ---------- aceite de Termos/Privacidade no primeiro login (Trilha C) ----------
+   Médico titular sem aceite registrado (ex.: cadastro assistido pela iddeia)
+   precisa aceitar uma vez; equipe/subusuário não vê esta tela. */
+async function verificarAceite(){
+  try {
+    const { data: pendente, error } = await sb.rpc("meu_aceite_pendente");
+    if (error || !pendente) return;
+  } catch (_e) { return; }
+  const ov = document.createElement("div");
+  ov.id = "aceite-overlay";
+  ov.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(14,42,54,.92);display:flex;align-items:center;justify-content:center;padding:20px";
+  ov.innerHTML =
+    '<div style="background:#fff;color:#1A211F;border-radius:16px;max-width:460px;width:100%;padding:28px;box-shadow:0 24px 60px rgba(0,0,0,.4)">' +
+      '<h2 style="margin:0 0 10px;font-size:1.25rem;color:#0E2A36">Antes de continuar</h2>' +
+      '<p style="margin:0 0 16px;color:#5A6763;font-size:.95rem;line-height:1.5">Para usar o SurgeNote, leia e aceite os documentos abaixo. Você só precisa fazer isso uma vez.</p>' +
+      '<label style="display:flex;gap:10px;align-items:flex-start;margin:0 0 18px;font-size:.92rem;cursor:pointer;line-height:1.45">' +
+        '<input type="checkbox" id="aceite-check" style="margin-top:3px;width:17px;height:17px;accent-color:#1D5468">' +
+        '<span>Li e aceito os <a href="termos.html" target="_blank" style="color:#1D5468">Termos de Uso</a> e a <a href="privacidade.html" target="_blank" style="color:#1D5468">Política de Privacidade</a> do SurgeNote.</span>' +
+      '</label>' +
+      '<button id="aceite-btn" disabled style="width:100%;border:none;border-radius:10px;padding:13px;font-weight:600;font-size:1rem;background:#1D5468;color:#fff;cursor:pointer;opacity:.55;font-family:inherit">Aceitar e continuar</button>' +
+      '<div id="aceite-msg" style="margin-top:10px;font-size:.85rem;color:#C2543F"></div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  const chk = document.getElementById("aceite-check");
+  const btn = document.getElementById("aceite-btn");
+  chk.addEventListener("change", () => { btn.disabled = !chk.checked; btn.style.opacity = chk.checked ? "1" : ".55"; });
+  btn.addEventListener("click", async () => {
+    btn.disabled = true; btn.textContent = "Registrando…";
+    const { error } = await sb.rpc("registrar_meu_aceite");
+    if (error) {
+      document.getElementById("aceite-msg").textContent = "Não foi possível registrar: " + error.message;
+      btn.disabled = false; btn.textContent = "Aceitar e continuar";
+      return;
+    }
+    ov.remove();
+  });
 }
 
 /* ---------- conexão Google Agenda (Fase B) ---------- */
