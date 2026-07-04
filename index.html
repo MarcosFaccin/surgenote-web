@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SurgeNote — Dite a cirurgia no WhatsApp. O resto a gente registra.</title>
-<meta name="description" content="O cirurgião dita a cirurgia por WhatsApp e o SurgeNote registra, calcula o honorário (CBHPM/SUS) e mostra produção, recebíveis e glosas num painel. 7 dias grátis.">
+<title>SurgeNote — Acabou a cirurgia? Manda no WhatsApp. O resto a gente registra.</title>
+<meta name="description" content="Mande a cirurgia pelo WhatsApp — áudio, texto ou foto do boletim — e o SurgeNote registra, calcula o honorário (CBHPM/SUS) e mostra produção, recebíveis e glosas num painel. 7 dias grátis.">
 <meta name="theme-color" content="#0E2A36">
-<meta property="og:title" content="SurgeNote — sua produção cirúrgica, ditada por WhatsApp">
-<meta property="og:description" content="Dite a cirurgia no WhatsApp. A IA registra, calcula o honorário e cobra por você. Teste grátis por 7 dias.">
+<meta property="og:title" content="SurgeNote — sua produção cirúrgica registrada pelo WhatsApp">
+<meta property="og:description" content="Mande um áudio no WhatsApp. A IA registra a cirurgia, calcula o honorário e ajuda você a cobrar. Teste grátis por 7 dias.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="icon-512.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -50,8 +50,9 @@ header.nav{position:sticky;top:0;z-index:20;background:rgba(14,42,54,.9);backdro
 .hero{background:radial-gradient(1200px 500px at 70% -10%, #14384a 0%, var(--escuro) 45%, var(--escuro2) 100%);color:#fff;padding:64px 0 72px;overflow:hidden}
 .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center}
 .hero .selo{display:inline-flex;align-items:center;gap:8px;font-size:.76rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--laranja);border:1px solid rgba(232,155,28,.4);border-radius:99px;padding:5px 13px;margin-bottom:20px}
-.hero h1{font-family:var(--display);font-weight:800;font-size:clamp(2rem,4.6vw,3.3rem);line-height:1.08;letter-spacing:-.02em;text-wrap:balance}
-.hero h1 .g{color:var(--laranja)}
+.hero h1{font-family:var(--display);font-weight:800;font-size:clamp(2rem,4.2vw,2.9rem);line-height:1.12;letter-spacing:-.02em;text-wrap:balance}
+.hero h1 .g{color:var(--laranja);white-space:nowrap}
+@media(max-width:560px){.hero h1 .g{white-space:normal;display:block}}
 .hero p.sub{font-size:1.12rem;color:rgba(255,255,255,.82);margin-top:18px;max-width:52ch}
 .hero-ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
 .hero .micro{font-size:.82rem;color:rgba(255,255,255,.55);margin-top:14px}
@@ -165,14 +166,14 @@ footer.rp .mini{font-size:.78rem;color:rgba(255,255,255,.4);margin-top:14px;max-
 <section class="hero">
   <div class="wrap hero-grid">
     <div>
-      <span class="selo">● Gestão cirúrgica por WhatsApp</span>
-      <h1>Dite a cirurgia no WhatsApp. <span class="g">O resto a gente registra.</span></h1>
-      <p class="sub">Você dita por áudio, texto ou foto do boletim. A IA registra, calcula o honorário de referência (CBHPM/SUS) e mostra sua produção, recebíveis e glosas num painel. Pare de perder honorário por falta de controle.</p>
+      <span class="selo">● Gestão cirúrgica pelo WhatsApp</span>
+      <h1>Acabou a cirurgia? <span style="white-space:nowrap">Manda no WhatsApp.</span> <span class="g">O resto a gente registra.</span></h1>
+      <p class="sub">Envie um áudio, uma mensagem de texto ou a foto do boletim cirúrgico. A IA registra a cirurgia, calcula o honorário de referência (CBHPM/SUS) e mostra sua produção, seus recebíveis e suas glosas num painel. Chega de perder honorário por falta de controle.</p>
       <div class="hero-ctas">
         <a class="btn btn-primario" href="cadastro.html">Começar grátis por 7 dias</a>
         <a class="btn btn-ghost" href="#como">Ver como funciona</a>
       </div>
-      <p class="micro">Sem cartão para testar · Cancela quando quiser · Funciona no seu WhatsApp de sempre</p>
+      <p class="micro">Sem cartão para testar · Cancele quando quiser · Funciona no seu WhatsApp de sempre</p>
     </div>
     <div class="demo">
       <div class="bolha">
@@ -200,9 +201,9 @@ footer.rp .mini{font-size:.78rem;color:rgba(255,255,255,.4);margin-top:14px;max-
   <div class="wrap">
     <span class="eyebrow">O problema</span>
     <h2 class="tit">Quanto honorário você já perdeu por não conferir o repasse?</h2>
-    <p class="lead">Operar em vários hospitais e convênios significa relatórios diferentes, prazos diferentes e glosas que passam despercebidas. Muito cirurgião só descobre o que ficou pelo caminho quando já é tarde — ou paga alguém caro para conferir na mão.</p>
-    <div class="destaque">R$ 300 a R$ 600 por mês</div>
-    <p class="fonte">é o que se cobra hoje por conferência manual de repasse. O SurgeNote automatiza isso — e ainda registra, agenda e cobra — por menos.</p>
+    <p class="lead">Operar em vários hospitais e convênios significa relatórios diferentes, prazos diferentes e glosas que passam despercebidas. Muitos cirurgiões só descobrem o que ficou pelo caminho quando já é tarde — ou pagam caro para alguém conferir manualmente.</p>
+    <div class="destaque">No mínimo, um salário por mês</div>
+    <p class="fonte">Conferir repasses manualmente exige alguém dedicado a isso — no mínimo o piso salarial de uma secretária, mais encargos e impostos. O SurgeNote automatiza essa conferência — e ainda registra, agenda e cobra — por uma fração disso.</p>
   </div>
 </section>
 
@@ -214,18 +215,18 @@ footer.rp .mini{font-size:.78rem;color:rgba(255,255,255,.4);margin-top:14px;max-
     <div class="passos">
       <div class="passo">
         <div class="n">1</div>
-        <h3>Dite no WhatsApp</h3>
-        <p>Logo depois da cirurgia, mande um áudio, um texto ou a foto do boletim. No número do SurgeNote, do seu WhatsApp de sempre.</p>
+        <h3>Mande no WhatsApp</h3>
+        <p>Logo depois da cirurgia, envie um áudio, uma mensagem de texto ou a foto do boletim para o número do SurgeNote — direto do seu WhatsApp de sempre.</p>
       </div>
       <div class="passo">
         <div class="n">2</div>
         <h3>A IA registra e calcula</h3>
-        <p>O SurgeNote entende o ditado, estrutura o registro e calcula o honorário de referência pela CBHPM/SUS — ou pela sua própria tabela de valores.</p>
+        <p>O SurgeNote entende a mensagem, organiza os dados da cirurgia e calcula o honorário de referência pela CBHPM/SUS — ou pela sua própria tabela de valores.</p>
       </div>
       <div class="passo">
         <div class="n">3</div>
         <h3>Acompanhe no painel</h3>
-        <p>Produção do mês, quem te deve, glosas, agenda e relatórios — no computador ou no celular, com o app instalado na tela inicial.</p>
+        <p>Produção do mês, valores a receber, glosas, agenda e relatórios — no computador ou no celular, com o app instalado na tela inicial.</p>
       </div>
     </div>
   </div>
@@ -235,14 +236,14 @@ footer.rp .mini{font-size:.78rem;color:rgba(255,255,255,.4);margin-top:14px;max-
 <section class="bloco beneficios">
   <div class="wrap">
     <span class="eyebrow">O que você ganha</span>
-    <h2 class="tit">Tudo o que sai da sua mão, num lugar só.</h2>
+    <h2 class="tit">Toda a sua produção cirúrgica num lugar só.</h2>
     <div class="grid-ben">
-      <div class="ben"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg><h3>Radar financeiro</h3><p>Veja quem te deve, quanto está atrasado e quais glosas recorrer — antes de virar prejuízo.</p></div>
+      <div class="ben"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg><h3>Radar financeiro</h3><p>Veja quem está devendo, quanto está atrasado e quais glosas contestar — antes de virar prejuízo.</p></div>
       <div class="ben"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><h3>Agenda integrada</h3><p>As cirurgias confirmadas entram na sua Google Agenda automaticamente. Sem digitar duas vezes.</p></div>
       <div class="ben"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><h3>Cálculo CBHPM/SUS</h3><p>Honorário de referência calculado na hora — e você pode manter a sua própria tabela por convênio.</p></div>
-      <div class="ben"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><h3>Cobrança automática</h3><p>Lembretes semanais no WhatsApp com o que está em aberto — para você não deixar dinheiro na mesa.</p></div>
+      <div class="ben"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><h3>Cobrança automática</h3><p>Lembretes semanais no WhatsApp com tudo o que está em aberto — para nenhuma cobrança cair no esquecimento.</p></div>
       <div class="ben"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg><h3>Relatórios prontos</h3><p>Mês fechado em PDF e planilha, por hospital ou convênio — para mandar ao financeiro sem retrabalho.</p></div>
-      <div class="ben"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><h3>Sua equipe junto</h3><p>Dê acesso à secretária ou instrumentador para alimentar a produção — você controla o que cada um vê.</p></div>
+      <div class="ben"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><h3>Sua equipe junto</h3><p>Dê acesso à secretária ou ao instrumentador para lançar a produção por você — e controle o que cada um pode ver.</p></div>
     </div>
   </div>
 </section>
@@ -267,15 +268,18 @@ footer.rp .mini{font-size:.78rem;color:rgba(255,255,255,.4);margin-top:14px;max-
       <div class="val">R$ 149,90<small>/mês</small></div>
       <div class="free">7 dias grátis para testar</div>
       <ul>
-        <li>Lançamento ilimitado por WhatsApp</li>
+        <li>Lançamentos ilimitados pelo WhatsApp</li>
         <li>Cálculo CBHPM/SUS + sua tabela</li>
-        <li>Radar financeiro, glosas e agenda</li>
+        <li>Radar financeiro, glosas e cobrança</li>
+        <li>Lembrete das cirurgias do dia seguinte</li>
+        <li>Integração com a Google Agenda</li>
+        <li>Resumo mensal em PDF no seu WhatsApp</li>
         <li>Relatórios em PDF e planilha</li>
         <li>Acesso para a sua equipe</li>
         <li>App no celular (instala na tela inicial)</li>
       </ul>
       <a class="btn btn-primario" href="cadastro.html">Começar meus 7 dias grátis</a>
-      <div class="semfid">Sem fidelidade · Cancela quando quiser</div>
+      <div class="semfid">Sem fidelidade · Cancele quando quiser</div>
     </div>
   </div>
 </section>
@@ -286,8 +290,8 @@ footer.rp .mini{font-size:.78rem;color:rgba(255,255,255,.4);margin-top:14px;max-
     <span class="eyebrow">Dúvidas frequentes</span>
     <h2 class="tit">O que os cirurgiões perguntam.</h2>
     <div style="margin-top:28px">
-      <details open><summary>Preciso instalar algum aplicativo?</summary><p>Não. Você dita as cirurgias pelo seu WhatsApp normal, e o painel abre no navegador — dá para instalar como app na tela inicial do celular, mas é opcional. Nada de loja de aplicativos.</p></details>
-      <details><summary>Meus dados e os dos meus pacientes estão seguros?</summary><p>Sim. Cada médico tem seus dados isolados dos demais, com verificação em duas etapas para acessos administrativos e mecanismos de privacidade previstos na LGPD. Dado de saúde é tratado como sensível.</p></details>
+      <details open><summary>Preciso instalar algum aplicativo?</summary><p>Não. Você registra as cirurgias pelo seu WhatsApp de sempre, e o painel abre no navegador — dá para instalar como app na tela inicial do celular, mas é opcional. Nada de loja de aplicativos.</p></details>
+      <details><summary>Meus dados e os dos meus pacientes estão seguros?</summary><p>Sim. Os dados de cada médico ficam isolados dos demais, os acessos administrativos exigem verificação em duas etapas e os dados de saúde são tratados como sensíveis, conforme a LGPD.</p></details>
       <details><summary>Funciona com os meus convênios?</summary><p>Sim. O cálculo usa as tabelas de referência CBHPM e SUS, e você pode cadastrar a sua própria tabela de valores por convênio para refletir o que realmente recebe.</p></details>
       <details><summary>Minha secretária pode usar?</summary><p>Pode. Você libera acesso para até dois membros da equipe (secretária, instrumentador) para alimentar a produção e a agenda — e decide se eles veem ou não o financeiro.</p></details>
       <details><summary>E se a IA entender algo errado no áudio?</summary><p>Todo lançamento entra numa fila de confirmação no painel antes de virar definitivo. Você revisa e ajusta em segundos — a IA agiliza, você mantém o controle.</p></details>
