@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard_gestao_iddeia.html
+
+Sitemap: https://surgenote.com.br/sitemap.xml
