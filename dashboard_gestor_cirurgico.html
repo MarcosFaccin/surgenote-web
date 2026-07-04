@@ -2814,16 +2814,16 @@ async function consultarTabelas(){
   const alvo = document.getElementById("ct-resultados");
   const conta = document.getElementById("ct-conta");
   if (termo.length < 3) { alvo.innerHTML = ""; conta.textContent = ""; return; }
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
   const t = termo.replace(/[%,]/g, "");
   const { data, error } = await sb.from("procedimentos")
     .select("codigo, nome, tabela, porte, valor_porte, valor_sus, porte_anestesico, num_auxiliares")
     .eq("ativo", true)
     .or("nome.ilike.%" + t + "%,codigo.ilike.%" + t + "%")
     .order("nome").limit(30);
-  if (error) { alvo.innerHTML = '<p style="color:var(--vermelho);font-size:.85rem">Erro na consulta: ' + error.message + '</p>'; return; }
-  if (!data || !data.length) { alvo.innerHTML = '<p style="color:var(--cinza);font-size:.85rem">Nada encontrado para "' + termo + '".</p>'; conta.textContent = "0"; return; }
+  if (error) { alvo.innerHTML = '<p style="color:var(--vermelho);font-size:.85rem">Erro na consulta: ' + esc(error.message) + '</p>'; return; }
+  if (!data || !data.length) { alvo.innerHTML = '<p style="color:var(--cinza);font-size:.85rem">Nada encontrado para "' + esc(termo) + '".</p>'; conta.textContent = "0"; return; }
   conta.textContent = data.length + (data.length === 30 ? "+" : "");
-  const esc = s => String(s ?? "").replace(/[<>&"]/g, c => ({ "<":"&lt;", ">":"&gt;", "&":"&amp;", '"':"&quot;" }[c]));
   let html = '<table style="width:100%;border-collapse:collapse;font-size:.84rem;min-width:640px">' +
     '<tr style="color:var(--cinza);text-align:left"><th style="padding:6px 8px">Código</th><th style="padding:6px 8px">Procedimento</th><th style="padding:6px 8px">Tabela</th><th style="padding:6px 8px">Porte</th><th style="padding:6px 8px">Aux.</th><th style="padding:6px 8px;text-align:right">Valor ref.</th></tr>';
   data.forEach(p => {
