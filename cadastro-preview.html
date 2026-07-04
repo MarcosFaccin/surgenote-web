@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SurgeNote — Crie sua conta</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#12384A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --marca:#1D5468;
+  --verde:var(--marca);
+  --verde-escuro:color-mix(in srgb, var(--marca) 72%, #04140F);
+  --verde-tinta:color-mix(in srgb, var(--marca) 14%, #FFFFFF);
+  --papel:#F4F6F3; --branco:#FFFFFF; --grafite:#1C2421; --cinza:#5C6662;
+  --linha:#DCE3DF; --vermelho:#A33B2E; --raio:12px;
+  --display:"Bricolage Grotesque",sans-serif; --corpo:"Instrument Sans",sans-serif;
+}
+@supports not (color: color-mix(in srgb, red, blue)){
+  :root{--verde-escuro:#123647;--verde-tinta:#DCE8ED}
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--corpo);background:var(--papel);color:var(--grafite);line-height:1.55;min-height:100vh}
+.hero{
+  background:linear-gradient(160deg, var(--verde-escuro), color-mix(in srgb, var(--marca) 55%, #06131A));
+  text-align:center;padding:44px 24px 40px;
+}
+.wrap{max-width:960px;margin:0 auto;padding:36px 24px 70px}
+.hero .marca{display:flex;align-items:center;justify-content:center;gap:10px;font-family:var(--display);font-weight:700;font-size:1.1rem;color:#fff;letter-spacing:.3px;margin-bottom:18px}
+.hero .marca img{width:48px;height:48px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.btn{box-shadow:0 6px 18px color-mix(in srgb, var(--marca) 30%, transparent)}
+.hero h1{font-family:var(--display);font-size:clamp(1.6rem,4vw,2.4rem);color:#fff;line-height:1.2;max-width:640px;margin:0 auto 12px}
+.hero p{color:rgba(255,255,255,.82);max-width:540px;margin:0 auto;font-size:1.02rem}
+@supports not (color: color-mix(in srgb, red, blue)){
+  .hero{background:linear-gradient(160deg,#123647,#0A1E28)}
+}
+.grade{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+@media(max-width:820px){.grade{grid-template-columns:1fr}}
+.como{padding-top:8px}
+.passo{display:flex;gap:14px;margin-bottom:22px}
+.passo .num{flex-shrink:0;width:34px;height:34px;border-radius:50%;background:var(--verde-tinta);color:var(--verde-escuro);font-family:var(--display);font-weight:700;display:flex;align-items:center;justify-content:center}
+.passo h3{font-family:var(--display);font-size:1rem;color:var(--verde-escuro);margin-bottom:2px}
+.passo p{font-size:.9rem;color:var(--cinza)}
+.card{background:var(--branco);border:1px solid var(--linha);border-radius:var(--raio);padding:28px}
+.card h2{font-family:var(--display);font-size:1.15rem;color:var(--verde-escuro);margin-bottom:16px}
+.campo{display:block;margin-bottom:14px}
+.campo span{display:block;font-size:.85rem;font-weight:600;margin-bottom:5px}
+.campo input{width:100%;padding:11px 12px;border:1px solid var(--linha);border-radius:8px;font:inherit;background:var(--papel)}
+.campo input:focus{border-color:var(--verde);outline:none;box-shadow:0 0 0 3px var(--verde-tinta)}
+.hp{position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden}
+.btn{width:100%;border:none;border-radius:8px;padding:13px;font-weight:600;font-size:1rem;background:var(--verde);color:#fff;cursor:pointer;font-family:inherit}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.55;cursor:default}
+.msg{font-size:.9rem;margin-top:12px;min-height:1.3em}
+.msg.err{color:var(--vermelho)}
+.lgpd{font-size:.76rem;color:var(--cinza);margin-top:14px}
+.sucesso{display:none;text-align:center;padding:16px 4px}
+.sucesso .check{width:56px;height:56px;border-radius:50%;background:var(--verde-tinta);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.sucesso h2{font-family:var(--display);color:var(--verde-escuro);margin-bottom:10px}
+.sucesso p{color:var(--cinza);font-size:.95rem;margin-bottom:8px}
+.sucesso a{color:var(--verde);font-weight:600}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="marca"><img src="icon-192.png" alt="">SurgeNote <span style="font-weight:400;opacity:.6">· iddeia</span></div>
+  <h1>Acabou a cirurgia? Manda no WhatsApp.<br>O resto a gente registra.</h1>
+  <p>Áudio, texto ou foto do boletim logo após o procedimento. A IA estrutura o registro, calcula o honorário de referência e mostra tudo no seu painel. <b>14 dias grátis, sem cartão.</b></p>
+</div>
+<div class="wrap">
+  <div class="grade">
+    <div class="como">
+      <div class="passo"><div class="num">1</div><div><h3>Crie sua conta</h3><p>Nome, CRM e o WhatsApp que você usa no dia a dia. Leva 1 minuto.</p></div></div>
+      <div class="passo"><div class="num">2</div><div><h3>Mande um oi no WhatsApp</h3><p>Seu número já fica autorizado. Mande a primeira cirurgia por áudio, texto ou foto do boletim.</p></div></div>
+      <div class="passo"><div class="num">3</div><div><h3>Acompanhe no painel</h3><p>Produção, valores de referência (CBHPM/SUS), recebíveis e glosas — e a sua própria tabela de valores.</p></div></div>
+    </div>
+
+    <div class="card">
+      <div id="form-area">
+        <h2>Criar minha conta</h2>
+        <label class="campo"><span>Nome completo *</span><input id="f-nome" placeholder="Dr(a). Nome Sobrenome" autocomplete="name"></label>
+        <label class="campo"><span>CRM *</span><input id="f-crm" placeholder="PR 12345"></label>
+        <label class="campo"><span>Especialidade</span><input id="f-esp" placeholder="Cirurgia geral"></label>
+        <label class="campo"><span>WhatsApp * (55 + DDD + número)</span><input id="f-tel" placeholder="5541998765432" inputmode="numeric"></label>
+        <label class="campo"><span>E-mail (será seu login) *</span><input id="f-email" type="email" autocomplete="email" placeholder="voce@exemplo.com"></label>
+        <label class="campo"><span>Senha * (mínimo 8 caracteres)</span><input id="f-senha" type="password" autocomplete="new-password" placeholder="••••••••"></label>
+        <label class="campo hp" aria-hidden="true">Site<input id="f-site" tabindex="-1" autocomplete="off"></label>
+        <label style="display:flex;gap:10px;align-items:flex-start;margin:14px 0;font-size:.9rem;cursor:pointer">
+          <input type="checkbox" id="f-aceite" style="margin-top:3px;width:16px;height:16px;accent-color:var(--marca)">
+          <span>Li e aceito os <a href="termos.html" target="_blank">Termos de Uso</a> e a <a href="privacidade.html" target="_blank">Política de Privacidade</a> do SurgeNote.</span>
+        </label>
+        <button class="btn" id="f-btn">Criar conta</button>
+        <p style="font-size:.82rem;color:var(--cinza);text-align:center;margin-top:10px">14 dias grátis com tudo liberado · depois, planos a partir de R$ 59,90/mês (anual) · sem fidelidade</p>
+        <div class="msg" id="f-msg"></div>
+        <p class="lgpd">Seus dados são usados apenas para operar o serviço e ficam isolados na sua conta (LGPD). Nada de paciente passa por aqui.</p>
+      </div>
+
+      <div class="sucesso" id="sucesso">
+        <div class="check">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1D5468" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <h2>Conta criada!</h2>
+        <p><b>Próximo passo:</b> mande um "oi" pelo seu WhatsApp cadastrado para o número da iddeia e envie sua primeira cirurgia.</p>
+        <p>Depois entre no <a href="dashboard_gestor_cirurgico.html">seu painel</a> com o e-mail e a senha que você criou.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://qntlelfavjyjwfphcndg.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFudGxlbGZhdmp5andmcGhjbmRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNTE0MzIsImV4cCI6MjA3OTcyNzQzMn0._k38zZfTmBB-rgUessfJ9gsn_eZWhKjfUuG-sSXcn3I';
+
+const $ = id => document.getElementById(id);
+
+async function criarConta(){
+  const msg = $('f-msg');
+  msg.className = 'msg'; msg.textContent = '';
+  const dados = {
+    nome: $('f-nome').value.trim(),
+    crm: $('f-crm').value.trim(),
+    especialidade: $('f-esp').value.trim(),
+    telefone: $('f-tel').value.trim(),
+    email: $('f-email').value.trim(),
+    senha: $('f-senha').value,
+    site: $('f-site').value,
+    aceite: $('f-aceite').checked
+  };
+  if(!dados.nome || !dados.crm || !dados.telefone || !dados.email || dados.senha.length < 8){
+    msg.className = 'msg err';
+    msg.textContent = 'Preencha nome, CRM, WhatsApp, e-mail e senha (mín. 8 caracteres).';
+    return;
+  }
+  if(!dados.aceite){
+    msg.className = 'msg err';
+    msg.textContent = 'Para criar a conta, é preciso aceitar os Termos de Uso e a Política de Privacidade.';
+    return;
+  }
+  const btn = $('f-btn');
+  btn.disabled = true; btn.textContent = 'Criando…';
+  try{
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/cadastro-self-service', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'apikey': SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify(dados)
+    });
+    const r = await resp.json();
+    if(!resp.ok || !r.ok) throw new Error(r.erro || ('Erro ' + resp.status));
+    $('form-area').style.display = 'none';
+    $('sucesso').style.display = 'block';
+  }catch(err){
+    msg.className = 'msg err';
+    msg.textContent = String(err.message || err);
+  }finally{
+    btn.disabled = false; btn.textContent = 'Criar conta';
+  }
+}
+$('f-btn').addEventListener('click', criarConta);
+$('f-senha').addEventListener('keydown', e => { if(e.key === 'Enter') criarConta(); });
+</script>
+</body>
+</html>
