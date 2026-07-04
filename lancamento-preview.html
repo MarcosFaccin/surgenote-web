@@ -142,7 +142,8 @@ h2.tit{font-family:var(--display);font-weight:700;font-size:clamp(1.6rem,3.2vw,2
 @media(max-width:520px){.planos4{grid-template-columns:1fr}}
 .pl{background:#fff;border:1px solid var(--linha);border-radius:16px;padding:22px 18px;text-align:center;position:relative}
 .pl.hero-pl{border:2px solid var(--laranja);box-shadow:0 18px 44px rgba(232,155,28,.18)}
-.pl .tag{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--laranja);color:#1A140A;font-size:.68rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:99px;padding:4px 12px}
+.pl .tag{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--laranja);color:#1A140A;font-size:.68rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:99px;padding:4px 12px;white-space:nowrap}
+.pl.hero-pl{padding-top:28px}
 .pl .cic{font-size:.78rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--marca)}
 .pl .eq{font-family:var(--display);font-weight:800;font-size:1.9rem;color:var(--escuro);margin:6px 0 0;line-height:1}
 .pl .eq small{font-size:.85rem;font-weight:600;color:var(--cinza)}
@@ -380,133 +381,6 @@ footer.rp .mini{font-size:.78rem;color:rgba(255,255,255,.4);margin-top:14px;max-
     <div style="text-align:center;margin-top:26px">
       <a class="btn btn-primario" href="cadastro.html">Começar meus 14 dias grátis</a>
       <p style="font-size:.8rem;color:var(--cinza);margin-top:10px">Sem fidelidade · Cancele quando quiser · Conta gratuita permanente para consultar as tabelas CBHPM/SUS</p>
-    </div>
-    <a class="link" href="#como">Como funciona</a>
-    <a class="link" href="#preco">Preço</a>
-    <a class="link" href="#faq">Dúvidas</a>
-    <a class="link entrar" href="dashboard_gestor_cirurgico.html">Entrar</a>
-    <a class="btn btn-primario" href="cadastro.html" style="padding:9px 16px;font-size:.92rem">Testar grátis</a>
-  </div>
-</header>
-
-<!-- HERO -->
-<section class="hero">
-  <div class="wrap hero-grid">
-    <div>
-      <span class="selo">● Gestão cirúrgica pelo WhatsApp</span>
-      <h1>Acabou a cirurgia? <span style="white-space:nowrap">Manda no WhatsApp.</span> <span class="g">O resto a gente registra.</span></h1>
-      <p class="sub">Envie um áudio, uma mensagem de texto ou a foto do boletim cirúrgico. A IA registra a cirurgia, calcula o honorário de referência (CBHPM/SUS) e mostra sua produção, seus recebíveis e suas glosas num painel. Chega de perder honorário por falta de controle.</p>
-      <div class="hero-ctas">
-        <a class="btn btn-primario" href="cadastro.html">Começar grátis por 14 dias</a>
-        <a class="btn btn-ghost" href="#como">Ver como funciona</a>
-      </div>
-      <p class="micro">Sem cartão para testar · Cancele quando quiser · Funciona no seu WhatsApp de sempre</p>
-    </div>
-    <div class="demo">
-      <div class="bolha">
-        <div class="top">🎙️ Áudio · 0:08</div>
-        <div class="wave" aria-hidden="true">
-          <i style="height:6px"></i><i style="height:14px"></i><i style="height:20px"></i><i style="height:10px"></i><i style="height:18px"></i><i style="height:22px"></i><i style="height:8px"></i><i style="height:16px"></i><i style="height:12px"></i><i style="height:20px"></i><i style="height:6px"></i><i style="height:14px"></i>
-        </div>
-        <div class="txt">“Fiz uma colecistectomia por vídeo no Cajuru, paciente Roberto, convênio Unimed, cobrei 1.800.”</div>
-      </div>
-      <div class="seta-demo">↓</div>
-      <div class="card-painel">
-        <div class="cp-top"><span class="cp-proc">Colecistectomia (vídeo)</span><span class="cp-pill">registrada</span></div>
-        <div class="cp-linha"><span>Paciente</span><b>Roberto</b></div>
-        <div class="cp-linha"><span>Hospital</span><b>Cajuru</b></div>
-        <div class="cp-linha"><span>Convênio</span><b>Unimed</b></div>
-        <div class="cp-linha"><span>Honorário</span><b>a receber</b></div>
-        <div class="cp-valor">R$ 1.800,00</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- DOR -->
-<section class="bloco dor">
-  <div class="wrap">
-    <span class="eyebrow">O problema</span>
-    <h2 class="tit">Quanto honorário você já perdeu por não conferir o repasse?</h2>
-    <p class="lead">Operar em vários hospitais e convênios significa relatórios diferentes, prazos diferentes e glosas que passam despercebidas. Muitos cirurgiões só descobrem o que ficou pelo caminho quando já é tarde — ou pagam caro para alguém conferir manualmente.</p>
-    <div class="destaque">No mínimo, um salário por mês</div>
-    <p class="fonte">Conferir repasses manualmente exige alguém dedicado a isso — no mínimo o piso salarial de uma secretária, mais encargos e impostos. O SurgeNote automatiza essa conferência — e ainda registra, agenda e cobra — por uma fração disso.</p>
-  </div>
-</section>
-
-<!-- COMO FUNCIONA -->
-<section class="bloco" id="como">
-  <div class="wrap">
-    <span class="eyebrow">Como funciona</span>
-    <h2 class="tit">Três passos. Nenhuma planilha.</h2>
-    <div class="passos">
-      <div class="passo">
-        <div class="n">1</div>
-        <h3>Mande no WhatsApp</h3>
-        <p>Logo depois da cirurgia, envie um áudio, uma mensagem de texto ou a foto do boletim para o número do SurgeNote — direto do seu WhatsApp de sempre.</p>
-      </div>
-      <div class="passo">
-        <div class="n">2</div>
-        <h3>A IA registra e calcula</h3>
-        <p>O SurgeNote entende a mensagem, organiza os dados da cirurgia e calcula o honorário de referência pela CBHPM/SUS — ou pela sua própria tabela de valores.</p>
-      </div>
-      <div class="passo">
-        <div class="n">3</div>
-        <h3>Acompanhe no painel</h3>
-        <p>Produção do mês, valores a receber, glosas, agenda e relatórios — no computador ou no celular, com o app instalado na tela inicial.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- BENEFÍCIOS -->
-<section class="bloco beneficios">
-  <div class="wrap">
-    <span class="eyebrow">O que você ganha</span>
-    <h2 class="tit">Toda a sua produção cirúrgica num lugar só.</h2>
-    <div class="grid-ben">
-      <div class="ben"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg><h3>Radar financeiro</h3><p>Veja quem está devendo, quanto está atrasado e quais glosas contestar — antes de virar prejuízo.</p></div>
-      <div class="ben"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><h3>Agenda integrada</h3><p>As cirurgias confirmadas entram na sua Google Agenda automaticamente. Sem digitar duas vezes.</p></div>
-      <div class="ben"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><h3>Cálculo CBHPM/SUS</h3><p>Honorário de referência calculado na hora — e você pode manter a sua própria tabela por convênio.</p></div>
-      <div class="ben"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><h3>Cobrança automática</h3><p>Lembretes semanais no WhatsApp com tudo o que está em aberto — para nenhuma cobrança cair no esquecimento.</p></div>
-      <div class="ben"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg><h3>Relatórios prontos</h3><p>Mês fechado em PDF e planilha, por hospital ou convênio — para mandar ao financeiro sem retrabalho.</p></div>
-      <div class="ben"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><h3>Sua equipe junto</h3><p>Dê acesso à secretária ou ao instrumentador para lançar a produção por você — e controle o que cada um pode ver.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- LEGADO / PROVA SOCIAL -->
-<section class="bloco legado">
-  <div class="wrap">
-    <span class="eyebrow" style="color:var(--laranja)">Feito por quem entende a rotina</span>
-    <h2 class="tit" style="color:#fff">O SurgeNote que os cirurgiões conheceram — reconstruído do zero.</h2>
-    <p class="lead">A ideia de organizar a produção cirúrgica não é nova; o que mudou foi a tecnologia. Reconstruímos tudo com IA e WhatsApp para que registrar uma cirurgia leve segundos, não minutos. Você está entre os primeiros a usar a nova geração.</p>
-    <p class="aspas">“A cirurgia acabou? Manda o áudio. O resto já está no painel quando você tira a luva.”</p>
-  </div>
-</section>
-
-<!-- PREÇO -->
-<section class="bloco preco" id="preco">
-  <div class="wrap" style="text-align:center">
-    <span class="eyebrow">Preço simples</span>
-    <h2 class="tit">Quanto mais tempo, menor o preço.</h2>
-    <div class="preco-card">
-      <div class="plano">Plano SurgeNote</div>
-      <div class="val">R$ 149,90<small>/mês</small></div>
-      <div class="free">14 dias grátis para testar</div>
-      <ul>
-        <li>Lançamentos ilimitados pelo WhatsApp</li>
-        <li>Cálculo CBHPM/SUS + sua tabela</li>
-        <li>Radar financeiro, glosas e cobrança</li>
-        <li>Lembrete das cirurgias do dia seguinte</li>
-        <li>Integração com a Google Agenda</li>
-        <li>Resumo mensal em PDF no seu WhatsApp</li>
-        <li>Relatórios em PDF e planilha</li>
-        <li>Acesso para a sua equipe</li>
-        <li>App no celular (instala na tela inicial)</li>
-      </ul>
-      <a class="btn btn-primario" href="cadastro.html">Começar meus 14 dias grátis</a>
-      <div class="semfid">Sem fidelidade · Cancele quando quiser</div>
     </div>
   </div>
 </section>
