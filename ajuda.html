@@ -61,6 +61,11 @@ details .c b{color:var(--escuro)}
 .contato a{color:var(--laranja);font-weight:600}
 footer{text-align:center;color:var(--cinza);font-size:.8rem;padding:30px 20px 40px}
 footer a{color:var(--marca)}
+
+.topo-link{display:block;text-align:right;margin-top:8px;font-size:.82rem;font-weight:600;color:var(--marca);text-decoration:none}
+.topo-link:hover{color:var(--laranja)}
+#btn-topo{position:fixed;right:18px;bottom:18px;width:46px;height:46px;border-radius:50%;border:none;background:var(--escuro);color:#fff;font-size:1.25rem;cursor:pointer;box-shadow:0 8px 22px rgba(10,30,40,.35);opacity:0;pointer-events:none;transition:opacity .25s;z-index:50}
+#btn-topo.on{opacity:1;pointer-events:auto}
 </style>
 </head>
 <body>
@@ -323,6 +328,8 @@ footer a{color:var(--marca)}
   <p class="sem-resultado" id="sem-resultado">Nenhum resultado para essa busca. Tente outra palavra ou escreva para <a href="mailto:contato@iddeia.com.br">contato@iddeia.com.br</a>.</p>
 </div>
 
+<button id="btn-topo" title="Voltar ao topo" aria-label="Voltar ao topo">↑</button>
+
 <footer>
   SurgeNote é um produto da iddeia · <a href="termos.html">Termos de Uso</a> · <a href="privacidade.html">Política de Privacidade</a>
 </footer>
@@ -349,6 +356,19 @@ campo.addEventListener('input', () => {
   });
   semRes.style.display = (t && achou === 0) ? 'block' : 'none';
 });
+
+// "voltar ao topo": link no fim de cada seção + botão flutuante ao rolar
+document.querySelectorAll('.secao').forEach(s => {
+  const a = document.createElement('a');
+  a.href = '#'; a.className = 'topo-link'; a.textContent = '↑ Voltar ao topo';
+  a.addEventListener('click', e => { e.preventDefault(); window.scrollTo({top:0, behavior:'smooth'}); });
+  s.appendChild(a);
+});
+const btnTopo = document.getElementById('btn-topo');
+btnTopo.addEventListener('click', () => window.scrollTo({top:0, behavior:'smooth'}));
+window.addEventListener('scroll', () => {
+  btnTopo.classList.toggle('on', window.scrollY > 400);
+}, {passive:true});
 </script>
 </body>
 </html>
