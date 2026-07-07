@@ -2678,8 +2678,17 @@ async function carregarContratos(){
         campoNum("1º aux %", "pct_aux1", r.pct_aux1) +
         campoNum("2º aux %", "pct_aux2", r.pct_aux2) +
         campoNum("Instrum. %", "pct_instrumentador", r.pct_instrumentador) +
-        '</div><button class="btn btn-confirmar ct-salvar" style="padding:7px 14px;font-size:.8rem;margin-top:8px">Salvar contrato</button>';
+        '</div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-confirmar ct-salvar" style="padding:7px 14px;font-size:.8rem">Salvar contrato</button>' +
+        (cv.tipo === "convenio" ? '<button class="btn btn-recusar ct-remover" style="padding:7px 14px;font-size:.8rem">Remover</button>' : '') +
+        '</div>';
       div.querySelector(".contrato-nome").textContent = cv.nome;
+      div.querySelector(".ct-remover")?.addEventListener("click", async () => {
+        if (!window.confirm('Remover o convênio "' + cv.nome + '"? Só é possível se ele não tiver cirurgias registradas.')) return;
+        const { data, error } = await sb.rpc("remover_convenio", { p_id: cv.id });
+        if (error) { toast(error.message, true); return; }
+        toast('Convênio "' + data.nome + '" removido.');
+        carregarContratos();
+      });
       div.querySelector(".ct-salvar").addEventListener("click", async () => {
         const pega = campo => Number(div.querySelector('[data-campo="' + campo + '"]').value || 0);
         const { error } = await sb.from("medico_convenio_regras").upsert({
