@@ -2553,9 +2553,11 @@ async function dtCarregarComposicao(){
 async function dtSugerirProc(){
   const termo = $("dt-add-proc").value.trim();
   if (termo.length < 3) return;
-  const [meus, proprios] = await Promise.all([
+  const [meus, susRes, proprios] = await Promise.all([
     sb.from("vw_meus_valores").select("codigo,nome_procedimento,valor_efetivo")
-      .ilike("nome_procedimento", "%" + termo.replace(/[%,]/g, "") + "%").order("nome_procedimento").limit(10),
+      .or(filtroBuscaProc(termo, "nome_procedimento")).order("nome_procedimento").limit(10),
+    sb.from("procedimentos").select("codigo,nome,valor_sus").eq("ativo", true).eq("tabela", "sus")
+      .or(filtroBuscaProc(termo, "nome")).order("nome").limit(6),
     sb.from("procedimentos_proprios").select("nome,categoria,valor").eq("ativo", true)
       .ilike("nome", "%" + termo.replace(/[%,]/g, "") + "%").order("nome").limit(8)
   ]);
@@ -2564,13 +2566,19 @@ async function dtSugerirProc(){
   (proprios.data || []).forEach(p => {
     const op = document.createElement("option");
     op.value = p.nome;
-    op.label = p.categoria + " · " + brl.format(Number(p.valor));
+    op.label = p.categoria + " (próprio) · " + brl.format(Number(p.valor));
     lista.appendChild(op);
   });
   (meus.data || []).forEach(p => {
     const op = document.createElement("option");
     op.value = p.nome_procedimento;
-    op.label = p.codigo + " · " + brl.format(Number(p.valor_efetivo || 0));
+    op.label = p.codigo + " · CBHPM · " + brl.format(Number(p.valor_efetivo || 0));
+    lista.appendChild(op);
+  });
+  (susRes.data || []).forEach(p => {
+    const op = document.createElement("option");
+    op.value = p.nome;
+    op.label = p.codigo + " · SUS · " + brl.format(Number(p.valor_sus || 0));
     lista.appendChild(op);
   });
 }
@@ -2581,6 +2589,12 @@ async function dtIncluirItem(){
   let { data: p } = await sb.from("vw_meus_valores")
     .select("procedimento_id,nome_procedimento,valor_efetivo")
     .eq("nome_procedimento", nome).limit(1).maybeSingle();
+  if (!p) {
+    const { data: s } = await sb.from("procedimentos")
+      .select("id,nome,valor_sus").eq("ativo", true).eq("tabela", "sus")
+      .eq("nome", nome).limit(1).maybeSingle();
+    if (s) p = { procedimento_id: s.id, nome_procedimento: s.nome, valor_efetivo: s.valor_sus };
+  }
   if (!p) {
     const { data: pr } = await sb.from("procedimentos_proprios")
       .select("nome,valor").eq("ativo", true).eq("nome", nome).limit(1).maybeSingle();
