@@ -2359,13 +2359,34 @@ function mvLinhaHtml(p, comRemover){
   return item;
 }
 
+/* Busca por código sem exigir pontuação: dígitos puros viram o formato CBHPM (d.dd.dd.dd-d) */
+function formatarCodigoCbhpm(dig){
+  let f = "";
+  for (let i = 0; i < dig.length && i < 8; i++) {
+    if (i === 1 || i === 3 || i === 5) f += ".";
+    if (i === 7) f += "-";
+    f += dig[i];
+  }
+  return f;
+}
+function filtroBuscaProc(termo, campoNome){
+  const t = termo.replace(/[%,()]/g, "");
+  const partes = [campoNome + ".ilike.%" + t + "%", "codigo.ilike.%" + t + "%"];
+  const dig = t.replace(/\D/g, "");
+  if (dig.length >= 3 && /^[\d.\-\s]+$/.test(t)) {
+    partes.push("codigo.ilike." + formatarCodigoCbhpm(dig) + "%");
+    if (dig !== t) partes.push("codigo.ilike.%" + dig + "%");
+  }
+  return partes.join(",");
+}
+
 async function mvBuscar(){
   const termo = $("mv-busca").value.trim();
   const alvo = $("mv-resultados");
   if (termo.length < 3) { alvo.innerHTML = ""; return; }
   const { data, error } = await sb.from("vw_meus_valores")
     .select("*")
-    .or("nome_procedimento.ilike.%" + termo.replace(/[%,]/g, "") + "%,codigo.ilike.%" + termo.replace(/[%,]/g, "") + "%")
+    .or(filtroBuscaProc(termo, "nome_procedimento"))
     .order("nome_procedimento")
     .limit(15);
   if (error) { alvo.innerHTML = '<div class="vazio">Erro na busca: ' + (error.message || "") + '</div>'; return; }
@@ -2837,7 +2858,7 @@ async function mcBuscar(){
   const { data, error } = await sb.from("procedimentos")
     .select("codigo, nome, tabela, porte, valor_porte, valor_sus")
     .eq("ativo", true)
-    .or("nome.ilike.%" + t + "%,codigo.ilike.%" + t + "%")
+    .or(filtroBuscaProc(termo, "nome"))
     .order("nome").limit(20);
   if (error) { alvo.innerHTML = '<p style="color:#C2543F;font-size:.85rem">Erro: ' + esc(error.message) + '</p>'; return; }
   if (!data || !data.length) { alvo.innerHTML = '<p style="color:#5A6763;font-size:.85rem">Nada encontrado para "' + esc(termo) + '".</p>'; return; }
@@ -2870,7 +2891,7 @@ async function consultarTabelas(){
   const { data, error } = await sb.from("procedimentos")
     .select("codigo, nome, tabela, porte, valor_porte, valor_sus, porte_anestesico, num_auxiliares")
     .eq("ativo", true)
-    .or("nome.ilike.%" + t + "%,codigo.ilike.%" + t + "%")
+    .or(filtroBuscaProc(termo, "nome"))
     .order("nome").limit(30);
   if (error) { alvo.innerHTML = '<p style="color:var(--vermelho);font-size:.85rem">Erro na consulta: ' + esc(error.message) + '</p>'; return; }
   if (!data || !data.length) { alvo.innerHTML = '<p style="color:var(--cinza);font-size:.85rem">Nada encontrado para "' + esc(termo) + '".</p>'; conta.textContent = "0"; return; }
