@@ -315,7 +315,9 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .dt-item{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:.85rem;border-bottom:1px dashed var(--linha)}
 .dt-item .nm{flex:1;min-width:0}
 .dt-item .pct{font-family:var(--mono);font-size:.76rem;color:var(--cinza);white-space:nowrap}
-.dt-item .via{font-size:.7rem;padding:2px 8px;border-radius:99px;border:1px solid var(--linha);background:var(--papel);cursor:pointer;white-space:nowrap}
+.dt-item .via{font-size:.72rem;padding:3px 10px;border-radius:99px;cursor:pointer;white-space:nowrap;font-family:inherit}
+.dt-item .via.v-mesma{border:1px solid var(--linha);background:var(--papel);color:var(--cinza)}
+.dt-item .via.v-outra{border:1px solid var(--petroleo);background:var(--petroleo-tinta);color:var(--petroleo);font-weight:600}
 .dt-item .rm{background:none;border:none;color:var(--vermelho);font-size:.95rem;padding:0 4px}
 .dt-pagamento{border-top:1px solid var(--linha);padding-top:14px}
 
@@ -2556,7 +2558,9 @@ async function dtCarregarComposicao(){
       div.querySelector(".pct").textContent = brl.format(Number(it.valor_base || 0)) +
         (it.valor_calculado != null ? " → " + brl.format(Number(it.valor_calculado)) : "");
       const via = div.querySelector(".via");
-      via.textContent = it.mesma_via ? "mesma via" : "outra via";
+      via.textContent = it.mesma_via ? "mesma via ⇄" : "outra via ⇄";
+      via.className = "via " + (it.mesma_via ? "v-mesma" : "v-outra");
+      via.title = "Clique para alternar entre mesma via e outra via de acesso";
       via.addEventListener("click", async () => {
         await sb.from("cirurgia_itens").update({ mesma_via: !it.mesma_via }).eq("id", it.id);
         dtCarregarComposicao();
@@ -2567,6 +2571,10 @@ async function dtCarregarComposicao(){
       });
       alvo.appendChild(div);
     });
+    const nota = document.createElement("p");
+    nota.style.cssText = "font-size:.72rem;color:var(--cinza);padding:6px 0 0";
+    nota.textContent = "Toque em “mesma via” para marcar um procedimento feito por outra via de acesso — o Recalcular aplica o % de “outra via” do contrato.";
+    alvo.appendChild(nota);
   }
   $("dt-urgencia").checked = !!dtCirurgia.urgencia;
   $("dt-papel").value = dtCirurgia.papel_medico || "cirurgiao";
