@@ -1936,7 +1936,7 @@ async function agCriar(){
   if (!dataTxt || !proc) { toast("Preencha data/hora e procedimento.", true); return; }
   const quando = new Date(dataTxt);
   if (isNaN(quando)) { toast("Data inválida.", true); return; }
-  if (quando < new Date()) { toast("A data precisa ser no futuro.", true); return; }
+  if (quando < new Date()) { toast("Agendamento é só para datas futuras. Cirurgia que já aconteceu: registre pelo botão + Lançar, na visão Início.", true); return; }
   const medicoId = await mvMedicoId();
   if (!medicoId) { toast("Não foi possível identificar seu cadastro de médico.", true); return; }
   const btn = $("ag-salvar");
