@@ -2715,6 +2715,9 @@ async function dtRecalcular(){
   if (data && data.erro === "sem_itens") { toast("Inclua ao menos um procedimento na composição.", true); return; }
   const m = data;
   let txt = "Subtotal " + brl.format(Number(m.subtotal || 0));
+  if (m.origem_regra === "hospital") txt += " · regra do hospital";
+  else if (m.origem_regra === "convenio") txt += " · regra geral do convênio";
+  else if (m.origem_regra === "padrao") txt += " · padrão de mercado (sem contrato)";
   if (Number(m.ajuste_pct)) txt += " · ajuste do contrato " + (m.ajuste_pct > 0 ? "+" : "") + m.ajuste_pct + "%";
   if (m.urgencia) txt += " · urgência +" + m.pct_urgencia + "%";
   if (m.papel !== "cirurgiao") txt += " · " + m.papel + " " + m.pct_papel + "%";
@@ -2751,37 +2754,55 @@ async function cvNovoSalvar(){
   carregarContratos();
 }
 
+function contratoCampos(r){
+  return '<div class="contrato-campos">' +
+    campoNum("Ajuste % (deflator −/ ágio +)", "ajuste_pct", r.ajuste_pct) +
+    campoNum("2º proc %", "pct_proc2", r.pct_proc2) +
+    campoNum("3º+ proc %", "pct_proc3", r.pct_proc3) +
+    campoNum("Outra via %", "pct_via_diferente", r.pct_via_diferente) +
+    campoNum("Urgência +%", "pct_urgencia", r.pct_urgencia) +
+    campoNum("1º aux %", "pct_aux1", r.pct_aux1) +
+    campoNum("2º aux %", "pct_aux2", r.pct_aux2) +
+    campoNum("Instrum. %", "pct_instrumentador", r.pct_instrumentador) +
+    '</div>';
+}
+const CONTRATO_PADRAO = { ajuste_pct: 0, pct_proc2: 70, pct_proc3: 50, pct_via_diferente: 100, pct_urgencia: 30, pct_aux1: 30, pct_aux2: 20, pct_instrumentador: 10 };
+async function ctSalvarRegra(div, convenioId, hospitalId, rotulo){
+  const pega = campo => Number(div.querySelector('[data-campo="' + campo + '"]').value || 0);
+  const { error } = await sb.rpc("salvar_contrato", {
+    p_convenio: convenioId, p_hospital: hospitalId,
+    p_ajuste: pega("ajuste_pct"), p_proc2: pega("pct_proc2"), p_proc3: pega("pct_proc3"),
+    p_via: pega("pct_via_diferente"), p_urgencia: pega("pct_urgencia"),
+    p_aux1: pega("pct_aux1"), p_aux2: pega("pct_aux2"), p_instr: pega("pct_instrumentador")
+  });
+  if (error) { toast("Não foi possível salvar: " + error.message, true); return; }
+  toast("Contrato " + rotulo + " salvo.");
+}
 async function carregarContratos(){
   const alvo = $("contratos");
   try {
-    const medicoId = await mvMedicoId();
-    const [convs, regras] = await Promise.all([
+    const [convs, regras, hosps] = await Promise.all([
       sb.from("convenios").select("id,nome,tipo").eq("ativo", true).neq("tipo", "sus").order("nome"),
-      sb.from("medico_convenio_regras").select("*")
+      sb.from("medico_convenio_regras").select("*"),
+      sb.from("hospitais").select("id,nome").order("nome")
     ]);
     if (convs.error) throw convs.error;
-    const porConv = {};
-    (regras.data || []).forEach(r => { porConv[r.convenio_id] = r; });
-    const alvoEl = alvo;
-    alvoEl.innerHTML = "";
+    const hospNome = {};
+    (hosps.data || []).forEach(h => { hospNome[h.id] = h.nome; });
+    alvo.innerHTML = "";
     (convs.data || []).forEach(cv => {
-      const r = porConv[cv.id] || { ajuste_pct: 0, pct_proc2: 70, pct_proc3: 50, pct_via_diferente: 100, pct_urgencia: 30, pct_aux1: 30, pct_aux2: 20, pct_instrumentador: 10 };
+      const doConv = (regras.data || []).filter(r => r.convenio_id === cv.id);
+      const geral = doConv.find(r => !r.hospital_id) || CONTRATO_PADRAO;
+      const porHosp = doConv.filter(r => r.hospital_id);
+
       const div = document.createElement("div");
       div.className = "contrato";
-      div.innerHTML = '<div class="contrato-nome"></div>' +
-        '<div class="contrato-campos">' +
-        campoNum("Ajuste % (deflator −/ ágio +)", "ajuste_pct", r.ajuste_pct) +
-        campoNum("2º proc %", "pct_proc2", r.pct_proc2) +
-        campoNum("3º+ proc %", "pct_proc3", r.pct_proc3) +
-        campoNum("Outra via %", "pct_via_diferente", r.pct_via_diferente) +
-        campoNum("Urgência +%", "pct_urgencia", r.pct_urgencia) +
-        campoNum("1º aux %", "pct_aux1", r.pct_aux1) +
-        campoNum("2º aux %", "pct_aux2", r.pct_aux2) +
-        campoNum("Instrum. %", "pct_instrumentador", r.pct_instrumentador) +
-        '</div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-confirmar ct-salvar" style="padding:7px 14px;font-size:.8rem">Salvar contrato</button>' +
+      div.innerHTML = '<div class="contrato-nome"></div>' + contratoCampos(geral) +
+        '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn btn-confirmar ct-salvar" style="padding:7px 14px;font-size:.8rem">Salvar contrato</button>' +
         (cv.tipo === "convenio" ? '<button class="btn btn-recusar ct-remover" style="padding:7px 14px;font-size:.8rem">Remover</button>' : '') +
-        '</div>';
-      div.querySelector(".contrato-nome").textContent = cv.nome;
+        '</div><div class="ct-hosps"></div>';
+      div.querySelector(".contrato-nome").textContent = cv.nome + (porHosp.length ? " · regra geral" : "");
+      div.querySelector(".ct-salvar").addEventListener("click", () => ctSalvarRegra(div, cv.id, null, cv.nome));
       div.querySelector(".ct-remover")?.addEventListener("click", async () => {
         if (!window.confirm('Remover o convênio "' + cv.nome + '"? Só é possível se ele não tiver cirurgias registradas.')) return;
         const { data, error } = await sb.rpc("remover_convenio", { p_id: cv.id });
@@ -2789,21 +2810,53 @@ async function carregarContratos(){
         toast('Convênio "' + data.nome + '" removido.');
         carregarContratos();
       });
-      div.querySelector(".ct-salvar").addEventListener("click", async () => {
-        const pega = campo => Number(div.querySelector('[data-campo="' + campo + '"]').value || 0);
-        const { error } = await sb.from("medico_convenio_regras").upsert({
-          medico_id: medicoId, convenio_id: cv.id,
-          ajuste_pct: pega("ajuste_pct"), pct_proc2: pega("pct_proc2"), pct_proc3: pega("pct_proc3"),
-          pct_via_diferente: pega("pct_via_diferente"), pct_urgencia: pega("pct_urgencia"),
-          pct_aux1: pega("pct_aux1"), pct_aux2: pega("pct_aux2"), pct_instrumentador: pega("pct_instrumentador"),
-          updated_at: new Date().toISOString()
+
+      const hospsDiv = div.querySelector(".ct-hosps");
+      porHosp.forEach(r => {
+        const sub = document.createElement("div");
+        sub.style.cssText = "margin-top:12px;padding:10px 12px;border:1px dashed var(--linha);border-radius:9px";
+        sub.innerHTML = '<div style="font-size:.82rem;font-weight:600;margin-bottom:6px"><span class="h-nome"></span></div>' +
+          contratoCampos(r) +
+          '<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-confirmar h-salvar" style="padding:6px 12px;font-size:.78rem">Salvar</button>' +
+          '<button class="btn btn-recusar h-remover" style="padding:6px 12px;font-size:.78rem">Remover regra</button></div>';
+        sub.querySelector(".h-nome").textContent = "No hospital: " + (hospNome[r.hospital_id] || "(hospital removido)");
+        sub.querySelector(".h-salvar").addEventListener("click", () =>
+          ctSalvarRegra(sub, cv.id, r.hospital_id, cv.nome + " · " + (hospNome[r.hospital_id] || "")));
+        sub.querySelector(".h-remover").addEventListener("click", async () => {
+          if (!window.confirm("Remover a regra específica deste hospital? A regra geral do convênio volta a valer.")) return;
+          const { error } = await sb.from("medico_convenio_regras").delete().eq("id", r.id);
+          if (error) { toast(error.message, true); return; }
+          toast("Regra do hospital removida.");
+          carregarContratos();
         });
-        if (error) { toast("Não foi possível salvar: " + error.message, true); return; }
-        toast("Contrato " + cv.nome + " salvo.");
+        hospsDiv.appendChild(sub);
       });
-      alvoEl.appendChild(div);
+
+      const semRegra = (hosps.data || []).filter(h => !porHosp.some(r => r.hospital_id === h.id));
+      if (semRegra.length) {
+        const add = document.createElement("div");
+        add.style.cssText = "display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center";
+        const sel = document.createElement("select");
+        sel.className = "sel-status";
+        sel.style.cssText = "padding:7px;font-size:.8rem;max-width:260px";
+        sel.innerHTML = '<option value="">regra diferente num hospital…</option>' +
+          semRegra.map(h => '<option value="' + h.id + '"></option>').join("");
+        Array.from(sel.options).slice(1).forEach((op, i) => { op.textContent = semRegra[i].nome; });
+        const bt = document.createElement("button");
+        bt.className = "btn";
+        bt.style.cssText = "padding:6px 12px;font-size:.78rem;background:var(--verde-tinta);color:var(--titulo)";
+        bt.textContent = "+ criar regra p/ hospital";
+        bt.addEventListener("click", async () => {
+          if (!sel.value) { toast("Escolha o hospital.", true); return; }
+          await ctSalvarRegra(div, cv.id, sel.value, cv.nome + " · " + (hospNome[sel.value] || ""));
+          carregarContratos();
+        });
+        add.append(sel, bt);
+        hospsDiv.appendChild(add);
+      }
+      alvo.appendChild(div);
     });
-    if (!(convs.data || []).length) alvoEl.innerHTML = '<div class="vazio">Sem convênios cadastrados.</div>';
+    if (!(convs.data || []).length) alvo.innerHTML = '<div class="vazio">Sem convênios cadastrados.</div>';
   } catch (e) {
     alvo.innerHTML = '<div class="vazio">Contratos indisponíveis: ' + (e.message || e) + '</div>';
   }
