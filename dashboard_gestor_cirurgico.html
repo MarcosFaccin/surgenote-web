@@ -467,6 +467,11 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
   .cartao h3{padding-right:0}
   .protocolo{position:static;display:inline-block;margin-top:8px;transform:rotate(-2deg)}
 }
+/* chips de procedimentos (lançamento/agendamento multi-procedimento) */
+.chips-proc{display:none;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip-proc{display:inline-flex;align-items:center;gap:6px;background:var(--verde-tinta);color:var(--titulo);border:1px solid var(--linha);border-radius:99px;padding:4px 10px;font-size:.78rem}
+.chip-proc button{background:none;border:none;color:var(--vermelho);cursor:pointer;font-size:.85rem;padding:0;line-height:1}
+
 /* autocomplete próprio (o datalist nativo corta nomes longos no Safari) */
 .ac-box{position:absolute;z-index:2000;background:var(--branco);border:1px solid var(--linha);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:280px;overflow-y:auto}
 .ac-item{padding:8px 12px;cursor:pointer}
@@ -647,6 +652,8 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
               <label class="campo" style="margin:0"><span>Convênio</span><input id="lc-conv" placeholder="ex.: Unimed, Particular"></label>
               <label class="campo" style="margin:0"><span>Valor previsto (R$)</span><input type="number" id="lc-valor" step="0.01" min="0" placeholder="preenchido ao escolher"></label>
             </div>
+            <div id="lc-chips" class="chips-proc"></div>
+            <button class="btn" id="lc-add-outro" type="button" style="margin-top:10px;padding:6px 12px;font-size:.78rem;background:var(--verde-tinta);color:var(--titulo)">+ adicionar outro procedimento</button>
             <div class="acoes" style="margin-top:14px">
               <button class="btn btn-confirmar" id="lc-salvar">Lançar cirurgia</button>
               <button class="btn btn-recusar" id="lc-fechar">Fechar</button>
@@ -706,6 +713,8 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
               <label class="campo" style="margin:0"><span>Paciente</span><input id="ag-pac" placeholder="nome do paciente"></label>
               <label class="campo" style="margin:0"><span>Hospital</span><input id="ag-hosp" placeholder="local"></label>
             </div>
+            <div id="ag-chips" class="chips-proc"></div>
+            <button class="btn" id="ag-add-outro" type="button" style="margin-top:10px;padding:6px 12px;font-size:.78rem;background:var(--verde-tinta);color:var(--titulo)">+ adicionar outro procedimento</button>
             <div class="acoes" style="margin-top:14px">
               <button class="btn btn-confirmar" id="ag-salvar">Agendar</button>
               <button class="btn btn-recusar" id="ag-cancelar">Fechar</button>
@@ -1218,6 +1227,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     lcProcTimer = setTimeout(lcSugerirProcedimentos, 350);
   });
   $("lc-proc").addEventListener("change", lcPreencherValor);
+  $("lc-add-outro").addEventListener("click", () => addOutroProc("lc-proc", lcItens, "lc-chips"));
+  $("ag-add-outro").addEventListener("click", () => addOutroProc("ag-proc", agItens, "ag-chips"));
   $("dt-fechar").addEventListener("click", () => { $("detalhe-fundo").hidden = true; });
   $("detalhe-fundo").addEventListener("click", (e) => { if (e.target.id === "detalhe-fundo") $("detalhe-fundo").hidden = true; });
   $("dt-pg-salvar").addEventListener("click", dtRegistrarPagamento);
@@ -1934,8 +1945,10 @@ async function agSugerirProcedimentos(){
 /* ---------- agenda: criar agendamento ---------- */
 async function agCriar(){
   const dataTxt = $("ag-data").value;
-  const proc = $("ag-proc").value.trim();
-  if (!dataTxt || !proc) { toast("Preencha data/hora e procedimento.", true); return; }
+  const nomes = agItens.slice();
+  const procAtual = $("ag-proc").value.trim();
+  if (procAtual) nomes.push(procAtual);
+  if (!dataTxt || !nomes.length) { toast("Preencha data/hora e procedimento.", true); return; }
   const quando = new Date(dataTxt);
   if (isNaN(quando)) { toast("Data inválida.", true); return; }
   if (quando < new Date()) { toast("Agendamento é só para datas futuras. Cirurgia que já aconteceu: registre pelo botão + Lançar, na visão Início.", true); return; }
@@ -1943,20 +1956,24 @@ async function agCriar(){
   if (!medicoId) { toast("Não foi possível identificar seu cadastro de médico.", true); return; }
   const btn = $("ag-salvar");
   btn.disabled = true; btn.textContent = "Agendando…";
-  const { error } = await sb.from("cirurgias").insert({
+  const { data: nova, error } = await sb.from("cirurgias").insert({
     medico_id: medicoId,
-    nome_procedimento: proc,
+    nome_procedimento: nomes[0],
     paciente_nome: $("ag-pac").value.trim() || null,
     hospital_nome: $("ag-hosp").value.trim() || null,
     data_cirurgia: quando.toISOString(),
     status: "confirmada",
     protocolo: "AG-" + Date.now().toString(36).toUpperCase(),
     observacoes: "Agendado pelo dashboard"
-  });
+  }).select("id").single();
+  if (error) { btn.disabled = false; btn.textContent = "Agendar"; toast("Não foi possível agendar: " + error.message, true); return; }
+  if (nomes.length > 1) await gravarComposicao(nova.id, nomes);
   btn.disabled = false; btn.textContent = "Agendar";
-  if (error) { toast("Não foi possível agendar: " + error.message, true); return; }
-  toast("Agendamento criado — vai para o Google Agenda em até 5 min.");
+  toast(nomes.length > 1
+    ? "Agendamento com " + nomes.length + " procedimentos criado — vai para o Google Agenda em até 5 min."
+    : "Agendamento criado — vai para o Google Agenda em até 5 min.");
   ["ag-data","ag-proc","ag-pac","ag-hosp"].forEach(id => $(id).value = "");
+  agItens = []; chipsRender("ag-chips", agItens);
   $("ag-form").hidden = true;
   carregarTudo();
 }
@@ -1981,19 +1998,71 @@ async function lcPreencherValor(){
   }
   if (p && Number(p.valor_efetivo) > 0) $("lc-valor").value = Number(p.valor_efetivo).toFixed(2);
 }
+/* ---------- multi-procedimento no lançamento/agendamento ---------- */
+let lcItens = [], agItens = [];
+function chipsRender(alvoId, arr){
+  const alvo = $(alvoId);
+  alvo.innerHTML = "";
+  arr.forEach((nome, i) => {
+    const c = document.createElement("span");
+    c.className = "chip-proc";
+    const t = document.createElement("span");
+    t.textContent = (i + 1) + "º · " + nome;
+    const x = document.createElement("button");
+    x.type = "button"; x.title = "Remover"; x.textContent = "✕";
+    x.addEventListener("click", () => { arr.splice(i, 1); chipsRender(alvoId, arr); });
+    c.append(t, x);
+    alvo.appendChild(c);
+  });
+  alvo.style.display = arr.length ? "flex" : "none";
+}
+function addOutroProc(inputId, arr, chipsId){
+  const inp = $(inputId);
+  const nome = inp.value.trim();
+  if (nome.length < 3) { toast("Escolha o procedimento antes de adicionar outro.", true); return; }
+  arr.push(nome);
+  chipsRender(chipsId, arr);
+  inp.value = "";
+  inp.focus();
+}
+async function valorBaseDoProcedimento(nome){
+  let { data: p } = await sb.from("vw_meus_valores")
+    .select("procedimento_id,valor_efetivo").eq("nome_procedimento", nome).limit(1).maybeSingle();
+  if (p) return { procedimento_id: p.procedimento_id, valor: Number(p.valor_efetivo || 0) };
+  const { data: s } = await sb.from("procedimentos").select("id,valor_sus")
+    .eq("ativo", true).eq("tabela", "sus").eq("nome", nome).limit(1).maybeSingle();
+  if (s) return { procedimento_id: s.id, valor: Number(s.valor_sus || 0) };
+  const { data: pr } = await sb.from("procedimentos_proprios").select("valor")
+    .eq("ativo", true).eq("nome", nome).limit(1).maybeSingle();
+  if (pr) return { procedimento_id: null, valor: Number(pr.valor || 0) };
+  return { procedimento_id: null, valor: 0 };
+}
+async function gravarComposicao(cirurgiaId, nomes){
+  const linhas = [];
+  for (const nome of nomes) {
+    const v = await valorBaseDoProcedimento(nome);
+    linhas.push({ cirurgia_id: cirurgiaId, procedimento_id: v.procedimento_id, nome: nome, valor_base: v.valor, mesma_via: true });
+  }
+  const { error } = await sb.from("cirurgia_itens").insert(linhas);
+  if (error) { toast("Registro criado, mas a composição falhou: " + error.message, true); return; }
+  await sb.rpc("recalcular_cirurgia", { p_cirurgia: cirurgiaId });
+}
+
 async function lcCriar(){
   const dataTxt = $("lc-data").value;
-  const proc = $("lc-proc").value.trim();
-  if (!dataTxt || !proc) { toast("Preencha data/hora e procedimento.", true); return; }
+  const nomes = lcItens.slice();
+  const procAtual = $("lc-proc").value.trim();
+  if (procAtual) nomes.push(procAtual);
+  if (!dataTxt || !nomes.length) { toast("Preencha data/hora e procedimento.", true); return; }
   const quando = new Date(dataTxt);
   if (isNaN(quando)) { toast("Data inválida.", true); return; }
   const medicoId = await mvMedicoId();
   if (!medicoId) { toast("Não foi possível identificar o cadastro do médico.", true); return; }
   const btn = $("lc-salvar");
   btn.disabled = true; btn.textContent = "Lançando…";
-  const { error } = await sb.from("cirurgias").insert({
+  const { data: nova, error } = await sb.from("cirurgias").insert({
     medico_id: medicoId,
-    nome_procedimento: proc,
+    nome_procedimento: nomes[0],
     paciente_nome: $("lc-pac").value.trim() || null,
     hospital_nome: $("lc-hosp").value.trim() || null,
     convenio_nome: $("lc-conv").value.trim() || null,
@@ -2002,11 +2071,15 @@ async function lcCriar(){
     status: "aguardando_confirmacao",
     protocolo: "MN-" + Date.now().toString(36).toUpperCase(),
     observacoes: "Lançado manualmente pelo dashboard"
-  });
+  }).select("id").single();
+  if (error) { btn.disabled = false; btn.textContent = "Lançar cirurgia"; toast("Não foi possível lançar: " + error.message, true); return; }
+  if (nomes.length > 1) await gravarComposicao(nova.id, nomes);
   btn.disabled = false; btn.textContent = "Lançar cirurgia";
-  if (error) { toast("Não foi possível lançar: " + error.message, true); return; }
-  toast("Lançamento enviado para a Fila de confirmação.");
+  toast(nomes.length > 1
+    ? "Lançamento com " + nomes.length + " procedimentos enviado para a Fila — valor calculado pelo contrato (100%/70%/50%)."
+    : "Lançamento enviado para a Fila de confirmação.");
   ["lc-data","lc-proc","lc-pac","lc-hosp","lc-conv","lc-valor"].forEach(id => $(id).value = "");
+  lcItens = []; chipsRender("lc-chips", lcItens);
   $("lc-form").hidden = true;
   carregarTudo();
 }
