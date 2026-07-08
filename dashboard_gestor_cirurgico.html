@@ -643,7 +643,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
             <button class="recarregar" id="lc-abrir">+ Lançar</button>
           </div>
           <div class="painel-corpo" id="lc-form" hidden>
-            <p style="font-size:.76rem;color:var(--cinza);margin:0 0 12px">O mesmo registro do WhatsApp, feito à mão — útil quando quem lança não usa o WhatsApp.</p>
+            <p style="font-size:.76rem;color:var(--cinza);margin:0 0 12px">O mesmo registro do WhatsApp, feito à mão — útil quando quem lança não usa o WhatsApp. A data decide: já aconteceu → Fila de confirmação; data futura → vira agendamento (agenda + Google).</p>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
               <label class="campo" style="margin:0"><span>Data e hora *</span><input type="datetime-local" id="lc-data"></label>
               <label class="campo" style="margin:0"><span>Procedimento *</span><input id="lc-proc" placeholder="digite 3+ letras" autocomplete="off"></label>
@@ -712,6 +712,8 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
               <label class="campo" style="margin:0"><span>Procedimento *</span><input id="ag-proc" placeholder="digite 3+ letras para sugestões" autocomplete="off"></label>
               <label class="campo" style="margin:0"><span>Paciente</span><input id="ag-pac" placeholder="nome do paciente"></label>
               <label class="campo" style="margin:0"><span>Hospital</span><input id="ag-hosp" placeholder="local"></label>
+              <label class="campo" style="margin:0"><span>Convênio</span><input id="ag-conv" placeholder="ex.: Unimed, Particular"></label>
+              <label class="campo" style="margin:0"><span>Valor previsto (R$)</span><input type="number" id="ag-valor" step="0.01" min="0" placeholder="preenchido ao escolher"></label>
             </div>
             <div id="ag-chips" class="chips-proc"></div>
             <button class="btn" id="ag-add-outro" type="button" style="margin-top:10px;padding:6px 12px;font-size:.78rem;background:var(--verde-tinta);color:var(--titulo)">+ adicionar outro procedimento</button>
@@ -719,7 +721,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
               <button class="btn btn-confirmar" id="ag-salvar">Agendar</button>
               <button class="btn btn-recusar" id="ag-cancelar">Fechar</button>
             </div>
-            <p style="font-size:.76rem;color:var(--cinza);margin-top:10px">O agendamento entra como cirurgia confirmada e é enviado ao Google Agenda automaticamente.</p>
+            <p style="font-size:.76rem;color:var(--cinza);margin-top:10px">A data decide: futura → cirurgia confirmada, enviada ao Google Agenda; já aconteceu → entra na Fila de confirmação como produção.</p>
           </div>
           <div class="painel-corpo" id="cal-corpo"></div>
         </section>
@@ -1241,6 +1243,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     clearTimeout(agProcTimer);
     agProcTimer = setTimeout(agSugerirProcedimentos, 300);
   });
+  $("ag-proc").addEventListener("change", agPreencherValor);
   $("mv-busca").addEventListener("input", () => {
     clearTimeout(mvTimer);
     mvTimer = setTimeout(mvBuscar, 350);
@@ -1944,35 +1947,12 @@ async function agSugerirProcedimentos(){
 
 /* ---------- agenda: criar agendamento ---------- */
 async function agCriar(){
-  const dataTxt = $("ag-data").value;
-  const nomes = agItens.slice();
-  const procAtual = $("ag-proc").value.trim();
-  if (procAtual) nomes.push(procAtual);
-  if (!dataTxt || !nomes.length) { toast("Preencha data/hora e procedimento.", true); return; }
-  const quando = new Date(dataTxt);
-  if (isNaN(quando)) { toast("Data inválida.", true); return; }
-  if (quando < new Date()) { toast("Agendamento é só para datas futuras. Cirurgia que já aconteceu: registre pelo botão + Lançar, na visão Início.", true); return; }
-  const medicoId = await mvMedicoId();
-  if (!medicoId) { toast("Não foi possível identificar seu cadastro de médico.", true); return; }
-  const btn = $("ag-salvar");
-  btn.disabled = true; btn.textContent = "Agendando…";
-  const { data: nova, error } = await sb.from("cirurgias").insert({
-    medico_id: medicoId,
-    nome_procedimento: nomes[0],
-    paciente_nome: $("ag-pac").value.trim() || null,
-    hospital_nome: $("ag-hosp").value.trim() || null,
-    data_cirurgia: quando.toISOString(),
-    status: "confirmada",
-    protocolo: "AG-" + Date.now().toString(36).toUpperCase(),
-    observacoes: "Agendado pelo dashboard"
-  }).select("id").single();
-  if (error) { btn.disabled = false; btn.textContent = "Agendar"; toast("Não foi possível agendar: " + error.message, true); return; }
-  if (nomes.length > 1) await gravarComposicao(nova.id, nomes);
-  btn.disabled = false; btn.textContent = "Agendar";
-  toast(nomes.length > 1
-    ? "Agendamento com " + nomes.length + " procedimentos criado — vai para o Google Agenda em até 5 min."
-    : "Agendamento criado — vai para o Google Agenda em até 5 min.");
-  ["ag-data","ag-proc","ag-pac","ag-hosp"].forEach(id => $(id).value = "");
+  const ok = await criarCirurgiaDash({
+    itens: agItens, procId: "ag-proc", dataId: "ag-data", pacId: "ag-pac",
+    hospId: "ag-hosp", convId: "ag-conv", valorId: "ag-valor", btnId: "ag-salvar"
+  });
+  if (!ok) return;
+  ["ag-data","ag-proc","ag-pac","ag-hosp","ag-conv","ag-valor"].forEach(id => $(id).value = "");
   agItens = []; chipsRender("ag-chips", agItens);
   $("ag-form").hidden = true;
   carregarTudo();
@@ -1986,9 +1966,11 @@ async function lcSugerirProcedimentos(){
   const itens = await buscarProcedimentosTodos(termo);
   acMostrar($("lc-proc"), itens);
 }
-async function lcPreencherValor(){
-  const nome = $("lc-proc").value.trim();
-  if (!nome || $("lc-valor").value) return;
+async function lcPreencherValor(){ return preencherValorAuto("lc-proc", "lc-valor"); }
+async function agPreencherValor(){ return preencherValorAuto("ag-proc", "ag-valor"); }
+async function preencherValorAuto(procId, valorId){
+  const nome = $(procId).value.trim();
+  if (!nome || $(valorId).value) return;
   let { data: p } = await sb.from("vw_meus_valores")
     .select("valor_efetivo").eq("nome_procedimento", nome).limit(1).maybeSingle();
   if (!p) {
@@ -1996,7 +1978,7 @@ async function lcPreencherValor(){
       .select("valor").eq("ativo", true).eq("nome", nome).limit(1).maybeSingle();
     if (pr) p = { valor_efetivo: pr.valor };
   }
-  if (p && Number(p.valor_efetivo) > 0) $("lc-valor").value = Number(p.valor_efetivo).toFixed(2);
+  if (p && Number(p.valor_efetivo) > 0) $(valorId).value = Number(p.valor_efetivo).toFixed(2);
 }
 /* ---------- multi-procedimento no lançamento/agendamento ---------- */
 let lcItens = [], agItens = [];
@@ -2048,36 +2030,51 @@ async function gravarComposicao(cirurgiaId, nomes){
   await sb.rpc("recalcular_cirurgia", { p_cirurgia: cirurgiaId });
 }
 
-async function lcCriar(){
-  const dataTxt = $("lc-data").value;
-  const nomes = lcItens.slice();
-  const procAtual = $("lc-proc").value.trim();
+/* formulário único: a DATA decide — futura vira agendamento (confirmada, vai ao
+   Google Agenda), passada/agora vira produção (Fila de confirmação). */
+async function criarCirurgiaDash(cfg){
+  const nomes = cfg.itens.slice();
+  const procAtual = $(cfg.procId).value.trim();
   if (procAtual) nomes.push(procAtual);
-  if (!dataTxt || !nomes.length) { toast("Preencha data/hora e procedimento.", true); return; }
+  const dataTxt = $(cfg.dataId).value;
+  if (!dataTxt || !nomes.length) { toast("Preencha data/hora e procedimento.", true); return false; }
   const quando = new Date(dataTxt);
-  if (isNaN(quando)) { toast("Data inválida.", true); return; }
+  if (isNaN(quando)) { toast("Data inválida.", true); return false; }
   const medicoId = await mvMedicoId();
-  if (!medicoId) { toast("Não foi possível identificar o cadastro do médico.", true); return; }
-  const btn = $("lc-salvar");
-  btn.disabled = true; btn.textContent = "Lançando…";
+  if (!medicoId) { toast("Não foi possível identificar o cadastro do médico.", true); return false; }
+  const futura = quando > new Date();
+  const btn = $(cfg.btnId);
+  const rotulo = btn.textContent;
+  btn.disabled = true; btn.textContent = "Salvando…";
+  const valor = cfg.valorId ? Number($(cfg.valorId).value) : 0;
   const { data: nova, error } = await sb.from("cirurgias").insert({
     medico_id: medicoId,
     nome_procedimento: nomes[0],
-    paciente_nome: $("lc-pac").value.trim() || null,
-    hospital_nome: $("lc-hosp").value.trim() || null,
-    convenio_nome: $("lc-conv").value.trim() || null,
+    paciente_nome: $(cfg.pacId).value.trim() || null,
+    hospital_nome: $(cfg.hospId).value.trim() || null,
+    convenio_nome: cfg.convId ? ($(cfg.convId).value.trim() || null) : null,
     data_cirurgia: quando.toISOString(),
-    valor_previsto: Number($("lc-valor").value) > 0 ? Number($("lc-valor").value) : null,
-    status: "aguardando_confirmacao",
-    protocolo: "MN-" + Date.now().toString(36).toUpperCase(),
-    observacoes: "Lançado manualmente pelo dashboard"
+    valor_previsto: valor > 0 ? valor : null,
+    status: futura ? "confirmada" : "aguardando_confirmacao",
+    protocolo: (futura ? "AG-" : "MN-") + Date.now().toString(36).toUpperCase(),
+    observacoes: futura ? "Agendado pelo dashboard" : "Lançado manualmente pelo dashboard"
   }).select("id").single();
-  if (error) { btn.disabled = false; btn.textContent = "Lançar cirurgia"; toast("Não foi possível lançar: " + error.message, true); return; }
+  if (error) { btn.disabled = false; btn.textContent = rotulo; toast("Não foi possível salvar: " + error.message, true); return false; }
   if (nomes.length > 1) await gravarComposicao(nova.id, nomes);
-  btn.disabled = false; btn.textContent = "Lançar cirurgia";
-  toast(nomes.length > 1
-    ? "Lançamento com " + nomes.length + " procedimentos enviado para a Fila — valor calculado pelo contrato (100%/70%/50%)."
-    : "Lançamento enviado para a Fila de confirmação.");
+  btn.disabled = false; btn.textContent = rotulo;
+  const extra = nomes.length > 1 ? " (" + nomes.length + " procedimentos, valor calculado pelo contrato)" : "";
+  toast(futura
+    ? "Agendamento criado" + extra + " — vai para o Google Agenda em até 5 min."
+    : "Cirurgia registrada" + extra + " — entrou na Fila de confirmação.");
+  return true;
+}
+
+async function lcCriar(){
+  const ok = await criarCirurgiaDash({
+    itens: lcItens, procId: "lc-proc", dataId: "lc-data", pacId: "lc-pac",
+    hospId: "lc-hosp", convId: "lc-conv", valorId: "lc-valor", btnId: "lc-salvar"
+  });
+  if (!ok) return;
   ["lc-data","lc-proc","lc-pac","lc-hosp","lc-conv","lc-valor"].forEach(id => $(id).value = "");
   lcItens = []; chipsRender("lc-chips", lcItens);
   $("lc-form").hidden = true;
