@@ -465,6 +465,12 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
   .cartao h3{padding-right:0}
   .protocolo{position:static;display:inline-block;margin-top:8px;transform:rotate(-2deg)}
 }
+/* autocomplete próprio (o datalist nativo corta nomes longos no Safari) */
+.ac-box{position:absolute;z-index:2000;background:var(--branco);border:1px solid var(--linha);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:280px;overflow-y:auto}
+.ac-item{padding:8px 12px;cursor:pointer}
+.ac-item:hover{background:var(--verde-tinta)}
+.ac-nome{font-size:.88rem;color:var(--grafite);line-height:1.3}
+.ac-sub{font-size:.74rem;color:var(--cinza);margin-top:2px}
 </style>
 </head>
 <body>
@@ -633,7 +639,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
             <p style="font-size:.76rem;color:var(--cinza);margin:0 0 12px">O mesmo registro do WhatsApp, feito à mão — útil quando quem lança não usa o WhatsApp.</p>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
               <label class="campo" style="margin:0"><span>Data e hora *</span><input type="datetime-local" id="lc-data"></label>
-              <label class="campo" style="margin:0"><span>Procedimento *</span><input id="lc-proc" placeholder="digite 3+ letras" list="lc-proc-lista" autocomplete="off"><datalist id="lc-proc-lista"></datalist></label>
+              <label class="campo" style="margin:0"><span>Procedimento *</span><input id="lc-proc" placeholder="digite 3+ letras" autocomplete="off"></label>
               <label class="campo" style="margin:0"><span>Paciente</span><input id="lc-pac" placeholder="nome do paciente"></label>
               <label class="campo" style="margin:0"><span>Hospital</span><input id="lc-hosp" placeholder="local"></label>
               <label class="campo" style="margin:0"><span>Convênio</span><input id="lc-conv" placeholder="ex.: Unimed, Particular"></label>
@@ -694,7 +700,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
           <div class="painel-corpo" id="ag-form" hidden style="border-bottom:1px solid var(--linha)">
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
               <label class="campo" style="margin:0"><span>Data e hora *</span><input type="datetime-local" id="ag-data"></label>
-              <label class="campo" style="margin:0"><span>Procedimento *</span><input id="ag-proc" placeholder="digite 3+ letras para sugestões" list="ag-proc-lista" autocomplete="off"><datalist id="ag-proc-lista"></datalist></label>
+              <label class="campo" style="margin:0"><span>Procedimento *</span><input id="ag-proc" placeholder="digite 3+ letras para sugestões" autocomplete="off"></label>
               <label class="campo" style="margin:0"><span>Paciente</span><input id="ag-pac" placeholder="nome do paciente"></label>
               <label class="campo" style="margin:0"><span>Hospital</span><input id="ag-hosp" placeholder="local"></label>
             </div>
@@ -875,8 +881,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
         <span class="ap-rotulo">Composição do honorário (contrato)</span>
         <div id="dt-itens"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-          <input id="dt-add-proc" class="sel-status" list="dt-proc-lista" placeholder="adicionar procedimento (3+ letras)" autocomplete="off" style="flex:1;min-width:170px;padding:9px;font-size:16px">
-          <datalist id="dt-proc-lista"></datalist>
+          <input id="dt-add-proc" class="sel-status" placeholder="adicionar procedimento (3+ letras)" autocomplete="off" style="flex:1;min-width:170px;padding:9px;font-size:16px">
           <button class="btn btn-confirmar" id="dt-add-btn" style="padding:8px 12px;font-size:.8rem">+ Incluir</button>
         </div>
         <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:10px">
@@ -1883,20 +1888,45 @@ async function gerarRelatorioCSV(){
   toast("Planilha gerada.");
 }
 
+/* ---------- autocomplete próprio (o datalist nativo corta nomes longos no Safari) ---------- */
+let acBox = null, acInput = null;
+function acFechar(){ if (acBox) { acBox.remove(); acBox = null; acInput = null; } }
+function acMostrar(inp, itens){
+  acFechar();
+  if (!itens.length || document.activeElement !== inp) return;
+  acInput = inp;
+  acBox = document.createElement("div");
+  acBox.className = "ac-box";
+  itens.forEach(p => {
+    const it = document.createElement("div");
+    it.className = "ac-item";
+    const n = document.createElement("div"); n.className = "ac-nome"; n.textContent = p.nome;
+    it.appendChild(n);
+    if (p.rotulo) { const s = document.createElement("div"); s.className = "ac-sub"; s.textContent = p.rotulo; it.appendChild(s); }
+    it.addEventListener("mousedown", e => {
+      e.preventDefault();
+      inp.value = p.nome;
+      acFechar();
+      inp.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    acBox.appendChild(it);
+  });
+  const r = inp.getBoundingClientRect();
+  acBox.style.left = (r.left + window.scrollX) + "px";
+  acBox.style.top = (r.bottom + window.scrollY + 4) + "px";
+  acBox.style.width = Math.max(r.width, 280) + "px";
+  document.body.appendChild(acBox);
+}
+document.addEventListener("click", e => { if (acBox && e.target !== acInput && !acBox.contains(e.target)) acFechar(); });
+document.addEventListener("scroll", () => acFechar(), true);
+
 /* ---------- agenda: autocomplete de procedimento ---------- */
 let agProcTimer = null;
 async function agSugerirProcedimentos(){
   const termo = $("ag-proc").value.trim();
-  if (termo.length < 3) return;
+  if (termo.length < 3) { acFechar(); return; }
   const itens = await buscarProcedimentosTodos(termo);
-  const lista = $("ag-proc-lista");
-  lista.innerHTML = "";
-  itens.forEach(p => {
-    const op = document.createElement("option");
-    op.value = p.nome;
-    op.label = p.rotulo;
-    lista.appendChild(op);
-  });
+  acMostrar($("ag-proc"), itens);
 }
 
 /* ---------- agenda: criar agendamento ---------- */
@@ -1933,16 +1963,9 @@ async function agCriar(){
 let lcProcTimer = null;
 async function lcSugerirProcedimentos(){
   const termo = $("lc-proc").value.trim();
-  if (termo.length < 3) return;
+  if (termo.length < 3) { acFechar(); return; }
   const itens = await buscarProcedimentosTodos(termo);
-  const lista = $("lc-proc-lista");
-  lista.innerHTML = "";
-  itens.forEach(p => {
-    const op = document.createElement("option");
-    op.value = p.nome;
-    op.label = p.rotulo;
-    lista.appendChild(op);
-  });
+  acMostrar($("lc-proc"), itens);
 }
 async function lcPreencherValor(){
   const nome = $("lc-proc").value.trim();
@@ -2552,7 +2575,7 @@ async function dtCarregarComposicao(){
 
 async function dtSugerirProc(){
   const termo = $("dt-add-proc").value.trim();
-  if (termo.length < 3) return;
+  if (termo.length < 3) { acFechar(); return; }
   const [meus, susRes, proprios] = await Promise.all([
     sb.from("vw_meus_valores").select("codigo,nome_procedimento,valor_efetivo")
       .or(filtroBuscaProc(termo, "nome_procedimento")).order("nome_procedimento").limit(10),
@@ -2561,26 +2584,11 @@ async function dtSugerirProc(){
     sb.from("procedimentos_proprios").select("nome,categoria,valor").eq("ativo", true)
       .ilike("nome", "%" + termo.replace(/[%,]/g, "") + "%").order("nome").limit(8)
   ]);
-  const lista = $("dt-proc-lista");
-  lista.innerHTML = "";
-  (proprios.data || []).forEach(p => {
-    const op = document.createElement("option");
-    op.value = p.nome;
-    op.label = p.categoria + " (próprio) · " + brl.format(Number(p.valor));
-    lista.appendChild(op);
-  });
-  (meus.data || []).forEach(p => {
-    const op = document.createElement("option");
-    op.value = p.nome_procedimento;
-    op.label = p.codigo + " · CBHPM · " + brl.format(Number(p.valor_efetivo || 0));
-    lista.appendChild(op);
-  });
-  (susRes.data || []).forEach(p => {
-    const op = document.createElement("option");
-    op.value = p.nome;
-    op.label = p.codigo + " · SUS · " + brl.format(Number(p.valor_sus || 0));
-    lista.appendChild(op);
-  });
+  const itens = [];
+  (proprios.data || []).forEach(p => itens.push({ nome: p.nome, rotulo: p.categoria + " (próprio) · " + brl.format(Number(p.valor)) }));
+  (meus.data || []).forEach(p => itens.push({ nome: p.nome_procedimento, rotulo: p.codigo + " · CBHPM · " + brl.format(Number(p.valor_efetivo || 0)) }));
+  (susRes.data || []).forEach(p => itens.push({ nome: p.nome, rotulo: p.codigo + " · SUS · " + brl.format(Number(p.valor_sus || 0)) }));
+  acMostrar($("dt-add-proc"), itens);
 }
 
 async function dtIncluirItem(){
