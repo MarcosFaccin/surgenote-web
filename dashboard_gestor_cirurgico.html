@@ -1320,7 +1320,7 @@ async function verificarContaMedico(){
   const msg = $("login-erro");
   if (msg) {
     msg.className = "erro-login";
-    msg.textContent = "Esta conta não é de um médico. Use o painel de gestão da iddeia para este login.";
+    msg.textContent = "Não encontramos um cadastro de médico para esta conta. Verifique o e-mail ou crie sua conta em \"Criar minha conta\".";
   }
   return false;
 }
