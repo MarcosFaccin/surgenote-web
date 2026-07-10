@@ -1308,7 +1308,25 @@ async function salvarNovaSenha(){
 }
 
 let appIniciado = false;
+/* bloqueia contas que não são de médico nem de equipe (ex.: login do gestor iddeia) */
+async function verificarContaMedico(){
+  try {
+    const { data, error } = await sb.rpc("meu_papel");
+    if (error || !data) return true;            // em dúvida, não trava (RLS protege os dados)
+    if (data.medico_id) return true;
+  } catch (_e) { return true; }
+  await sb.auth.signOut();
+  mostrar("view-login");
+  const msg = $("login-erro");
+  if (msg) {
+    msg.className = "erro-login";
+    msg.textContent = "Esta conta não é de um médico. Use o painel de gestão da iddeia para este login.";
+  }
+  return false;
+}
+
 function iniciarApp(sessao){
+  verificarContaMedico().then(ok => { if (!ok) appIniciado = false; });
   mostrar("view-app");
   $("usuario-email").textContent = sessao.user.email || "";
   $("mes-nome").textContent = new Date().toLocaleString("pt-BR", { month: "long" });
