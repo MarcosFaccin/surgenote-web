@@ -75,6 +75,7 @@ button{font-family:inherit;cursor:pointer}
 .lc-cta:hover{filter:brightness(1.08)}
 .lc-ditar{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid #E89B1C;border-radius:12px;background:transparent;color:#E89B1C;font-weight:700;font-size:1rem;padding:14px 22px;transition:filter .15s}
 .lc-ditar:hover{filter:brightness(1.08)}
+.lc-ditar svg{width:22px;height:22px;flex-shrink:0}
 .lc-ditar.gravando{background:var(--vermelho);border-color:var(--vermelho);color:#fff;animation:lcPulsa 1.2s infinite}
 @keyframes lcPulsa{50%{filter:brightness(1.25)}}
 .lc-linha-cta{display:flex;gap:10px;justify-content:center;align-items:stretch;flex-wrap:wrap}
@@ -479,6 +480,12 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 }
 @media (max-width: 640px){
   main{padding:12px 12px 96px}
+  /* lançar por voz vira botão só de microfone (estilo WhatsApp) na mesma linha */
+  .lc-linha-cta{flex-wrap:nowrap}
+  .lc-linha-cta .lc-cta{min-width:0}
+  .lc-ditar{padding:12px 15px}
+  .lc-ditar:not(.gravando):not(.ocupado) .lc-dit-txt{display:none}
+  .lc-ditar svg{width:24px;height:24px}
   .cartao h3{padding-right:0}
   .protocolo{position:static;display:inline-block;margin-top:8px;transform:rotate(-2deg)}
 }
@@ -589,7 +596,10 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
     <section class="painel" aria-label="Lançamento manual de cirurgia" style="text-align:center;margin-bottom:16px">
       <div class="lc-linha-cta">
         <button class="lc-cta" id="lc-abrir">+ Lançar cirurgia</button>
-        <button class="lc-ditar" id="lc-ditar" title="Lançar a cirurgia falando">🎤 Lançar por voz</button>
+        <button class="lc-ditar" id="lc-ditar" title="Lançar a cirurgia falando" aria-label="Lançar por voz">
+          <svg class="lc-dit-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a1 1 0 0 0-2 0 5 5 0 0 1-10 0 1 1 0 0 0-2 0 7 7 0 0 0 6 6.92V20H8.5a1 1 0 0 0 0 2h7a1 1 0 0 0 0-2H13v-2.08A7 7 0 0 0 19 11z"/></svg>
+          <span class="lc-dit-txt">Lançar por voz</span>
+        </button>
       </div>
       <div class="painel-corpo" id="lc-form" style="text-align:left" hidden>
         <p class="lc-transc" id="lc-transc" hidden></p>
@@ -3263,6 +3273,14 @@ let ditRec = null, ditTimer = null, ditIni = 0;
 
 function ditSuportado(){ return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder); }
 
+/* troca só o rótulo do botão (o ícone de microfone fica); "ocupado" mantém o texto visível no celular */
+function ditRotulo(txt, ocupado){
+  const btn = $("lc-ditar");
+  btn.classList.toggle("ocupado", !!ocupado);
+  const el = btn.querySelector(".lc-dit-txt");
+  if (el) el.textContent = txt;
+}
+
 async function ditToggle(){
   if (ditRec && ditRec.state === "recording") { ditRec.stop(); return; }
   if (!ditSuportado()) { toast("Este navegador não suporta gravação de áudio.", true); return; }
@@ -3281,11 +3299,11 @@ async function ditToggle(){
     btn.classList.remove("gravando");
     const blob = new Blob(pedacos, { type: ditRec.mimeType || tipo || "audio/webm" });
     ditRec = null;
-    if (blob.size < 1000) { btn.textContent = "🎤 Lançar por voz"; toast("Áudio muito curto — tente de novo.", true); return; }
-    btn.disabled = true; btn.textContent = "Transcrevendo…";
+    if (blob.size < 1000) { ditRotulo("Lançar por voz", false); toast("Áudio muito curto — tente de novo.", true); return; }
+    btn.disabled = true; ditRotulo("Transcrevendo…", true);
     try { await ditEnviar(blob); }
     catch (e) { toast("Ditado falhou: " + (e.message || e), true); }
-    btn.disabled = false; btn.textContent = "🎤 Lançar por voz";
+    btn.disabled = false; ditRotulo("Lançar por voz", false);
   };
   ditRec.start();
   ditIni = Date.now();
@@ -3293,10 +3311,10 @@ async function ditToggle(){
   btn.classList.add("gravando");
   ditTimer = setInterval(() => {
     const s = Math.floor((Date.now() - ditIni) / 1000);
-    btn.textContent = "■ Parar (" + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") + ")";
+    ditRotulo("■ Parar (" + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") + ")");
     if (s >= 90 && ditRec && ditRec.state === "recording") ditRec.stop(); // limite de 90s
   }, 500);
-  btn.textContent = "■ Parar (0:00)";
+  ditRotulo("■ Parar (0:00)");
 }
 
 async function ditEnviar(blob){
