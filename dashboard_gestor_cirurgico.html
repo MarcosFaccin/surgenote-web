@@ -1275,6 +1275,10 @@ window.addEventListener("DOMContentLoaded", async () => {
     agProcTimer = setTimeout(agSugerirProcedimentos, 300);
   });
   $("ag-proc").addEventListener("change", agPreencherValor);
+  ligarSugestaoCatalogo("lc-hosp", "hospitais");
+  ligarSugestaoCatalogo("ag-hosp", "hospitais");
+  ligarSugestaoCatalogo("lc-conv", "convenios");
+  ligarSugestaoCatalogo("ag-conv", "convenios");
   $("mv-busca").addEventListener("input", () => {
     clearTimeout(mvTimer);
     mvTimer = setTimeout(mvBuscar, 350);
@@ -1996,6 +2000,25 @@ function acMostrar(inp, itens){
 }
 document.addEventListener("click", e => { if (acBox && e.target !== acInput && !acBox.contains(e.target)) acFechar(); });
 document.addEventListener("scroll", () => acFechar(), true);
+
+/* ---------- sugestões de hospital/convênio já cadastrados (anti-duplicidade) ---------- */
+async function sugerirCatalogo(inpId, tabela){
+  const inp = $(inpId);
+  const termo = inp.value.trim();
+  let q = sb.from(tabela).select("nome").order("nome").limit(8);
+  if (tabela === "convenios") q = q.eq("ativo", true);
+  if (termo) q = q.ilike("nome", "%" + termo + "%");
+  const { data } = await q;
+  acMostrar(inp, (data || []).map(h => ({ nome: h.nome, rotulo: termo ? "" : "já cadastrado" })));
+}
+function ligarSugestaoCatalogo(inpId, tabela){
+  let timer = null;
+  $(inpId).addEventListener("focus", () => sugerirCatalogo(inpId, tabela));
+  $(inpId).addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => sugerirCatalogo(inpId, tabela), 300);
+  });
+}
 
 /* ---------- agenda: autocomplete de procedimento ---------- */
 let agProcTimer = null;
