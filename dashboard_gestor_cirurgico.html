@@ -50,7 +50,10 @@ html[data-tema="escuro"] .campo input, html[data-tema="escuro"] .sel-status{colo
 
 *{box-sizing:border-box;margin:0;padding:0}
 html{font-size:16px}
-html,body{overflow-x:hidden}
+/* overflow-x:hidden no body quebra o sticky do header (body vira scroll
+   container); clip corta o transbordo sem criar rolagem própria */
+html{overflow-x:hidden}
+body{overflow-x:clip}
 body{font-family:var(--corpo);background:var(--papel);color:var(--grafite);line-height:1.55;min-height:100vh}
 button{font-family:inherit;cursor:pointer}
 :focus-visible{outline:3px solid var(--verde);outline-offset:2px;border-radius:4px}
