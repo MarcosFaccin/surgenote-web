@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Conectando sua agenda — SurgeNote</title>
+<style>
+  body{font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(160deg,#123B4C,#0A1E28);color:#fff;
+    display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+  .caixa{text-align:center;padding:24px;max-width:420px}
+  .rodinha{width:40px;height:40px;border:4px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;
+    margin:0 auto 18px;animation:gira 1s linear infinite}
+  @keyframes gira{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="caixa">
+  <div class="rodinha"></div>
+  <h2>Conectando sua Google Agenda…</h2>
+  <p style="opacity:.85">Só um instante, estamos concluindo a autorização.</p>
+</div>
+<script>
+// Ponto de retorno do Google OAuth no NOSSO domínio (exigência da
+// verificação do app). Apenas repassa code/state/error para a Edge
+// Function do Supabase, que faz a troca segura dos códigos.
+(function(){
+  var EF = "https://qntlelfavjyjwfphcndg.supabase.co/functions/v1/google-agenda-oauth";
+  var q = window.location.search || "";
+  if (!q) { document.querySelector(".caixa").innerHTML = "<h2>Link inválido</h2><p style='opacity:.85'>Volte ao painel e clique em Conectar novamente.</p>"; return; }
+  window.location.replace(EF + q);
+})();
+</script>
+</body>
+</html>
