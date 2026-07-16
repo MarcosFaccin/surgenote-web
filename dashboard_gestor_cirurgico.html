@@ -539,8 +539,9 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .chip-proc .chip-via:hover{color:var(--titulo);border-color:var(--titulo)}
 
 /* autocomplete próprio (o datalist nativo corta nomes longos no Safari) */
-.ac-box{position:absolute;z-index:2000;background:var(--branco);border:1px solid var(--linha);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:280px;overflow-y:auto}
+.ac-box{position:absolute;z-index:2000;background:var(--branco);border:1px solid var(--linha);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:280px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .ac-item{padding:8px 12px;cursor:pointer}
+@media (max-width:640px){.ac-item{padding:11px 12px}}
 .ac-item:hover{background:var(--verde-tinta)}
 .ac-nome{font-size:.88rem;color:var(--grafite);line-height:1.3}
 .ac-sub{font-size:.74rem;color:var(--cinza);margin-top:2px}
@@ -2255,6 +2256,10 @@ function acMostrar(inp, itens){
   acBox.style.left = (r.left + window.scrollX) + "px";
   acBox.style.top = (r.bottom + window.scrollY + 4) + "px";
   acBox.style.width = Math.max(r.width, 280) + "px";
+  // não deixar a lista sumir embaixo do teclado do celular:
+  // limita a altura ao espaço visível abaixo do campo (mín. 120px p/ dar rolagem)
+  const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+  acBox.style.maxHeight = Math.max(120, Math.min(280, vh - r.bottom - 16)) + "px";
   document.body.appendChild(acBox);
 }
 document.addEventListener("click", e => { if (acBox && e.target !== acInput && !acBox.contains(e.target)) acFechar(); });
