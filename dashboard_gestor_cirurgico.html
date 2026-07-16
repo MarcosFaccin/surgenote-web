@@ -545,6 +545,16 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .ac-item:hover{background:var(--verde-tinta)}
 .ac-nome{font-size:.88rem;color:var(--grafite);line-height:1.3}
 .ac-sub{font-size:.74rem;color:var(--cinza);margin-top:2px}
+/* busca de procedimento em TELA CHEIA (só celular) */
+.bc-fundo{position:fixed;inset:0;z-index:9998;background:var(--branco);display:flex;flex-direction:column;animation:bcSobe .18s ease-out}
+@keyframes bcSobe{from{transform:translateY(28px);opacity:.5}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){.bc-fundo{animation:none}}
+.bc-topo{display:flex;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--linha);flex:0 0 auto}
+.bc-topo input{flex:1;min-width:0;padding:11px 12px;border:1px solid var(--linha);border-radius:10px;font-size:16px;font-family:inherit}
+.bc-cancelar{background:none;border:none;color:var(--marca);font-weight:600;font-size:.9rem;cursor:pointer;padding:8px 4px;font-family:inherit}
+.bc-lista{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:2px 0 28px}
+.bc-lista .ac-item{padding:13px 16px;border-bottom:1px solid var(--linha)}
+.bc-dica{padding:26px 18px;color:var(--cinza);font-size:.85rem;text-align:center}
 </style>
 </head>
 <body>
@@ -2233,6 +2243,8 @@ async function gerarRelatorioCSV(){
 let acBox = null, acInput = null;
 function acFechar(){ if (acBox) { acBox.remove(); acBox = null; acInput = null; } }
 function acMostrar(inp, itens){
+  // busca em tela cheia aberta p/ este campo? resultados vão pra lá
+  if (bcFundo && inp === bcAlvo) { bcRender(itens); return; }
   acFechar();
   if (!itens.length || document.activeElement !== inp) return;
   acInput = inp;
@@ -2269,6 +2281,64 @@ document.addEventListener("scroll", (e) => {
   if (acBox && (e.target === acBox || acBox.contains(e.target))) return;
   acFechar();
 }, true);
+
+/* ---------- busca de procedimento em TELA CHEIA (só celular) ----------
+   Tocar num campo de procedimento abre uma tela própria: busca no topo,
+   resultados no resto. Rolar a lista recolhe o teclado (estilo app). */
+const BC_CAMPOS = ["lc-proc","ag-proc","dt-add-proc"];
+let bcFundo = null, bcAlvo = null, bcInput = null, bcLista = null;
+function bcFechar(){ if (bcFundo){ bcFundo.remove(); bcFundo = bcAlvo = bcInput = bcLista = null; } }
+function bcDica(txt){ if (bcLista) bcLista.innerHTML = '<div class="bc-dica">' + txt + '</div>'; }
+function bcAbrir(inp){
+  acFechar(); bcFechar();
+  bcAlvo = inp;
+  bcFundo = document.createElement("div");
+  bcFundo.className = "bc-fundo";
+  const topo = document.createElement("div"); topo.className = "bc-topo";
+  bcInput = document.createElement("input");
+  bcInput.placeholder = inp.placeholder || "digite 3+ letras";
+  bcInput.autocomplete = "off";
+  const canc = document.createElement("button"); canc.type = "button"; canc.className = "bc-cancelar"; canc.textContent = "Cancelar";
+  topo.appendChild(bcInput); topo.appendChild(canc);
+  bcLista = document.createElement("div"); bcLista.className = "bc-lista";
+  bcFundo.appendChild(topo); bcFundo.appendChild(bcLista);
+  document.body.appendChild(bcFundo);
+  bcDica("Digite 3 ou mais letras para buscar no catálogo.");
+  canc.addEventListener("click", bcFechar);
+  bcInput.addEventListener("input", () => {
+    bcAlvo.value = bcInput.value;
+    if (bcInput.value.trim().length < 3) { bcDica("Digite 3 ou mais letras para buscar no catálogo."); }
+    bcAlvo.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  // começar a rolar a lista recolhe o teclado
+  bcLista.addEventListener("touchmove", () => { if (document.activeElement === bcInput) bcInput.blur(); }, { passive: true });
+  bcInput.value = inp.value;
+  bcInput.focus();
+  if (bcInput.value.trim().length >= 3) bcAlvo.dispatchEvent(new Event("input", { bubbles: true }));
+}
+function bcRender(itens){
+  if (!bcLista) return;
+  if (!itens.length) { bcDica("Nada encontrado — confira a grafia ou tente outro termo."); return; }
+  bcLista.innerHTML = "";
+  itens.forEach(p => {
+    const it = document.createElement("div"); it.className = "ac-item";
+    const n = document.createElement("div"); n.className = "ac-nome"; n.textContent = p.nome; it.appendChild(n);
+    if (p.rotulo) { const s = document.createElement("div"); s.className = "ac-sub"; s.textContent = p.rotulo; it.appendChild(s); }
+    it.addEventListener("click", () => {
+      const alvo = bcAlvo;
+      bcFechar();
+      alvo.value = p.nome;
+      alvo.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    bcLista.appendChild(it);
+  });
+}
+document.addEventListener("focusin", e => {
+  if (window.innerWidth > 640 || bcFundo) return;
+  if (!BC_CAMPOS.includes(e.target.id)) return;
+  e.target.blur();
+  bcAbrir(e.target);
+});
 
 /* ---------- sugestões de hospital/convênio já cadastrados (anti-duplicidade) ---------- */
 async function sugerirCatalogo(inpId, tabela){
