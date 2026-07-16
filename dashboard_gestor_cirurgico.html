@@ -236,6 +236,9 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .aj-seta{margin-left:auto;color:var(--cinza);font-size:1.2rem}
 .aj-voltar{background:none;border:none;color:var(--marca);font-size:.95rem;font-weight:600;font-family:inherit;
   padding:4px 2px;margin-bottom:10px;cursor:pointer}
+/* "uma coisa por tela" no celular (Agenda/Financeiro): menu e voltar só existem no mobile */
+.v-menu{display:none}
+.v-voltar{display:none}
 .ap-grupo{margin-bottom:16px}
 .ap-grupo:last-child{margin-bottom:2px}
 .ap-rotulo{display:block;font-size:.72rem;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--cinza);margin-bottom:8px}
@@ -486,6 +489,12 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
   .lc-ditar{padding:12px 15px}
   .lc-ditar:not(.gravando):not(.ocupado) .lc-dit-txt{display:none}
   .lc-ditar svg{width:24px;height:24px}
+  /* uma coisa por tela: seções secundárias viram itens de menu */
+  .v-menu{display:block;margin-top:16px}
+  .v-sec{display:none !important}
+  .view.sub-aberta .v-sec.aberta{display:block !important;animation:surge .18s ease-out}
+  .view.sub-aberta > section:not(.v-sec),.view.sub-aberta .v-menu{display:none}
+  .view.sub-aberta .v-voltar{display:block}
   .cartao h3{padding-right:0}
   .protocolo{position:static;display:inline-block;margin-top:8px;transform:rotate(-2deg)}
 }
@@ -654,6 +663,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
     </div>
 
     <div class="view" data-view="agenda">
+        <button class="aj-voltar v-voltar" type="button">‹ Agenda</button>
         <section class="painel" aria-label="Calendário de cirurgias" style="margin-bottom:16px">
           <div class="painel-cab" style="flex-wrap:wrap;gap:8px;align-items:center">
             <h2>Calendário</h2>
@@ -692,12 +702,19 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
           <div class="painel-corpo" id="cal-corpo"></div>
         </section>
 
-        <section class="painel" aria-label="Movimentações recentes" style="margin-bottom:16px">
+        <div class="v-menu">
+          <div class="aj-lista">
+            <button class="aj-item v-item" data-sub="recentes" type="button"><span class="aj-ico">🕘</span><span>Recentes</span><span class="aj-seta">›</span></button>
+            <button class="aj-item v-item" data-sub="sincronizacao" type="button"><span class="aj-ico">🔄</span><span>Sincronização com o Google</span><span class="aj-seta">›</span></button>
+          </div>
+        </div>
+
+        <section class="painel v-sec" data-sub="recentes" aria-label="Movimentações recentes" style="margin-bottom:16px">
           <div class="painel-cab"><h2>Recentes</h2></div>
           <div class="painel-corpo" id="recentes"></div>
         </section>
 
-        <section class="painel" aria-label="Sincronização com o Google Agenda">
+        <section class="painel v-sec" data-sub="sincronizacao" aria-label="Sincronização com o Google Agenda">
           <div class="painel-cab">
             <h2>Sincronização com o Google</h2>
             <span class="conta" id="ag-conta"></span>
@@ -705,7 +722,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
           <div class="painel-corpo" id="agenda"></div>
         </section>
 
-        <section class="painel" aria-label="Conexão com o Google Agenda" style="margin-top:16px" id="ga-painel">
+        <section class="painel v-sec" data-sub="sincronizacao" aria-label="Conexão com o Google Agenda" style="margin-top:16px" id="ga-painel">
           <div class="painel-cab"><h2>Google Agenda</h2><span class="conta" id="ga-estado"></span></div>
           <div class="painel-corpo">
             <p id="ga-texto" style="font-size:.84rem;color:var(--cinza);margin:0 0 12px">Verificando conexão…</p>
@@ -718,6 +735,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
     </div>
 
     <div class="view" data-view="financeiro">
+    <button class="aj-voltar v-voltar" type="button">‹ Financeiro</button>
     <section class="painel" aria-label="Radar financeiro">
       <div class="painel-cab">
         <h2>Radar financeiro — quem te deve</h2>
@@ -726,7 +744,16 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
       <div class="painel-corpo" id="radar"></div>
     </section>
 
-    <section class="painel" aria-label="Comparador de convênios" style="margin-top:16px">
+    <div class="v-menu">
+      <div class="aj-lista">
+        <button class="aj-item v-item" data-sub="comparador" type="button"><span class="aj-ico">📊</span><span>Comparador de convênios</span><span class="aj-seta">›</span></button>
+        <button class="aj-item v-item" data-sub="pipeline" type="button"><span class="aj-ico">📈</span><span>Pipeline do mês</span><span class="aj-seta">›</span></button>
+        <button class="aj-item v-item" data-sub="conciliacao" type="button"><span class="aj-ico">🧾</span><span>Conciliação pendente</span><span class="aj-seta">›</span></button>
+        <button class="aj-item v-item" data-sub="relatorio" type="button"><span class="aj-ico">🖨️</span><span>Relatório hospital/convênio</span><span class="aj-seta">›</span></button>
+      </div>
+    </div>
+
+    <section class="painel v-sec" data-sub="comparador" aria-label="Comparador de convênios" style="margin-top:16px">
       <div class="painel-cab">
         <h2>Comparador de convênios</h2>
         <span class="conta" id="cc-conta"></span>
@@ -734,17 +761,17 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
       <div class="painel-corpo" id="comparador"></div>
     </section>
 
-        <section class="painel" aria-label="Pipeline por status" style="margin-top:16px">
+        <section class="painel v-sec" data-sub="pipeline" aria-label="Pipeline por status" style="margin-top:16px">
           <div class="painel-cab"><h2>Pipeline do mês</h2></div>
           <div class="painel-corpo" id="pipeline"></div>
         </section>
 
-        <section class="painel" aria-label="Conciliação pendente" style="margin-top:16px">
+        <section class="painel v-sec" data-sub="conciliacao" aria-label="Conciliação pendente" style="margin-top:16px">
           <div class="painel-cab"><h2>Conciliação pendente</h2><span class="conta" id="concil-conta"></span></div>
           <div class="painel-corpo" id="conciliacao"></div>
         </section>
 
-        <section class="painel" aria-label="Relatório para hospital ou convênio" style="margin-top:16px">
+        <section class="painel v-sec" data-sub="relatorio" aria-label="Relatório para hospital ou convênio" style="margin-top:16px">
           <div class="painel-cab"><h2>Relatório hospital/convênio</h2></div>
           <div class="painel-corpo">
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
@@ -1054,8 +1081,21 @@ function mostrar(tela){
 function trocarView(nome){
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("ativa", v.dataset.view === nome));
   document.querySelectorAll(".aba").forEach(a => a.classList.toggle("ativa", a.dataset.view === nome));
+  document.querySelectorAll(".view.sub-aberta").forEach(v => {
+    v.classList.remove("sub-aberta");
+    v.querySelectorAll(".v-sec").forEach(s => s.classList.remove("aberta"));
+  });
   if (nome === "ajustes") { trocarAjuste(null); return; }
   try { history.replaceState(null, "", "#" + nome); } catch (e) {}
+  window.scrollTo({ top: 0 });
+}
+/* "uma coisa por tela" no celular (Agenda/Financeiro): abre uma seção secundária (null = fecha) */
+function trocarSub(view, nome){
+  const v = document.querySelector('.view[data-view="' + view + '"]');
+  if (!v) return;
+  v.classList.toggle("sub-aberta", !!nome);
+  v.querySelectorAll(".v-sec").forEach(s => s.classList.toggle("aberta", s.dataset.sub === nome));
+  try { history.replaceState(null, "", "#" + view + (nome ? "/" + nome : "")); } catch (e) {}
   window.scrollTo({ top: 0 });
 }
 /* subpáginas de Ajustes (null = menu) */
@@ -1165,8 +1205,10 @@ function ligarAparencia(){
   } catch (e) {}
   aplicarAparencia();
   midiaEscuro.addEventListener("change", aplicarAparencia);
-  document.querySelectorAll(".aj-item").forEach(b => b.addEventListener("click", () => trocarAjuste(b.dataset.aj)));
-  document.querySelectorAll(".aj-voltar").forEach(b => b.addEventListener("click", () => trocarAjuste(null)));
+  document.querySelectorAll(".aj-item[data-aj]").forEach(b => b.addEventListener("click", () => trocarAjuste(b.dataset.aj)));
+  document.querySelectorAll('.view[data-view="ajustes"] .aj-voltar').forEach(b => b.addEventListener("click", () => trocarAjuste(null)));
+  document.querySelectorAll(".v-item").forEach(b => b.addEventListener("click", () => trocarSub(b.closest(".view").dataset.view, b.dataset.sub)));
+  document.querySelectorAll(".v-voltar").forEach(b => b.addEventListener("click", () => trocarSub(b.closest(".view").dataset.view, null)));
   document.querySelectorAll(".ap-temas button").forEach(b =>
     b.addEventListener("click", () => { prefAparencia.tema = b.dataset.tema; salvarAparencia(); }));
   document.querySelectorAll(".ap-cor[data-cor]").forEach(b =>
@@ -1265,6 +1307,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   if (["agenda","financeiro","ajustes"].includes(vIni)) {
     trocarView(vIni);
     if (vIni === "ajustes" && ajIni) trocarAjuste(ajIni);
+    else if (ajIni) trocarSub(vIni, ajIni);
   } else if (vIni === "valores") { trocarView("ajustes"); trocarAjuste("valores"); }
   if (SUPABASE_URL.includes("SEU-PROJETO") || SUPABASE_ANON_KEY.includes("COLE_AQUI")) {
     mostrar("view-setup");
