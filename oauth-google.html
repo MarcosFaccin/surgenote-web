@@ -22,12 +22,25 @@
 </div>
 <script>
 // Ponto de retorno do Google OAuth no NOSSO domínio (exigência da
-// verificação do app). Apenas repassa code/state/error para a Edge
-// Function do Supabase, que faz a troca segura dos códigos.
+// verificação do app). Duas funções:
+// 1) chegando do Google (?code=&state=) → repassa à Edge Function;
+// 2) voltando da Edge Function (#fim=ok|erro&t=...&m=...) → mostra o resultado.
 (function(){
   var EF = "https://qntlelfavjyjwfphcndg.supabase.co/functions/v1/google-agenda-oauth";
+  var caixa = document.querySelector(".caixa");
+  var h = new URLSearchParams((window.location.hash || "").replace(/^#/, ""));
+  if (h.get("fim")) {
+    var ok = h.get("fim") === "ok";
+    caixa.innerHTML =
+      '<div style="font-size:56px">' + (ok ? "✅" : "⚠️") + "</div>" +
+      "<h2></h2><p style='opacity:.85'></p>" +
+      '<p style="margin-top:22px"><a href="dashboard_gestor_cirurgico.html" style="display:inline-block;background:#E89B1C;color:#0A1E28;font-weight:700;text-decoration:none;border-radius:10px;padding:12px 22px">Voltar ao painel</a></p>';
+    caixa.querySelector("h2").textContent = h.get("t") || (ok ? "Google Agenda conectada!" : "Não foi possível conectar");
+    caixa.querySelector("p").textContent = h.get("m") || "";
+    return;
+  }
   var q = window.location.search || "";
-  if (!q) { document.querySelector(".caixa").innerHTML = "<h2>Link inválido</h2><p style='opacity:.85'>Volte ao painel e clique em Conectar novamente.</p>"; return; }
+  if (!q) { caixa.innerHTML = "<h2>Link inválido</h2><p style='opacity:.85'>Volte ao painel e clique em Conectar novamente.</p>"; return; }
   window.location.replace(EF + q);
 })();
 </script>
