@@ -1052,7 +1052,16 @@ function mostrar(tela){
 function trocarView(nome){
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("ativa", v.dataset.view === nome));
   document.querySelectorAll(".aba").forEach(a => a.classList.toggle("ativa", a.dataset.view === nome));
+  if (nome === "ajustes") { trocarAjuste(null); return; }
   try { history.replaceState(null, "", "#" + nome); } catch (e) {}
+  window.scrollTo({ top: 0 });
+}
+/* subpáginas de Ajustes (null = menu) */
+function trocarAjuste(nome){
+  const menu = $("aj-menu");
+  if (menu) menu.hidden = !!nome;
+  document.querySelectorAll(".aj-sub").forEach(s => s.hidden = (s.dataset.aj !== nome));
+  try { history.replaceState(null, "", "#ajustes" + (nome ? "/" + nome : "")); } catch (e) {}
   window.scrollTo({ top: 0 });
 }
 function toast(msg, ruim){
@@ -1154,11 +1163,8 @@ function ligarAparencia(){
   } catch (e) {}
   aplicarAparencia();
   midiaEscuro.addEventListener("change", aplicarAparencia);
-  $("btn-aparencia").addEventListener("click", () => { $("aparencia-painel").hidden = !$("aparencia-painel").hidden; });
-  document.addEventListener("click", (e) => {
-    const painel = $("aparencia-painel");
-    if (!painel.hidden && !painel.contains(e.target) && e.target.id !== "btn-aparencia") painel.hidden = true;
-  });
+  document.querySelectorAll(".aj-item").forEach(b => b.addEventListener("click", () => trocarAjuste(b.dataset.aj)));
+  document.querySelectorAll(".aj-voltar").forEach(b => b.addEventListener("click", () => trocarAjuste(null)));
   document.querySelectorAll(".ap-temas button").forEach(b =>
     b.addEventListener("click", () => { prefAparencia.tema = b.dataset.tema; salvarAparencia(); }));
   document.querySelectorAll(".ap-cor[data-cor]").forEach(b =>
@@ -1253,7 +1259,11 @@ window.addEventListener("DOMContentLoaded", async () => {
   ligarAparencia();
   document.querySelectorAll(".aba").forEach(a => a.addEventListener("click", () => trocarView(a.dataset.view)));
   const hashInicial = location.hash.replace("#", "");
-  if (["agenda","financeiro","valores"].includes(hashInicial)) trocarView(hashInicial);
+  const [vIni, ajIni] = hashInicial.split("/");
+  if (["agenda","financeiro","ajustes"].includes(vIni)) {
+    trocarView(vIni);
+    if (vIni === "ajustes" && ajIni) trocarAjuste(ajIni);
+  } else if (vIni === "valores") { trocarView("ajustes"); trocarAjuste("valores"); }
   if (SUPABASE_URL.includes("SEU-PROJETO") || SUPABASE_ANON_KEY.includes("COLE_AQUI")) {
     mostrar("view-setup");
     return;
@@ -3090,8 +3100,9 @@ async function aplicarPapel(){
     if (data) papelUsuario = data;
   } catch (e) {}
   const p = papelUsuario;
-  // visão Valores (tabela de valores, contratos, equipe) = só titular
-  document.querySelectorAll('.aba[data-view="valores"]').forEach(a => a.style.display = p.titular ? "" : "none");
+  // itens de Ajustes marcados como só-titular (assinatura, valores, contratos, equipe, consulta)
+  document.querySelectorAll(".aj-item.so-titular").forEach(a => a.style.display = p.titular ? "" : "none");
+  if (!p.titular) document.querySelectorAll(".aj-sub").forEach(s => { if (s.dataset.aj !== "aparencia") s.hidden = true; });
   // visão Financeiro + números consolidados = titular ou equipe autorizada
   const fin = !!p.ver_financeiro;
   document.querySelectorAll('.aba[data-view="financeiro"]').forEach(a => a.style.display = fin ? "" : "none");
@@ -3105,10 +3116,12 @@ async function aplicarPapel(){
   if (!p.titular && p.nome_equipe) {
     $("usuario-email").textContent = p.nome_equipe + " (equipe)";
   }
-  // se a visão ativa ficou oculta, volta para o início
+  // se a visão ativa ficou oculta, volta para o início / menu de Ajustes
   const ativa = document.querySelector(".view.ativa");
-  if (ativa && ((ativa.dataset.view === "valores" && !p.titular) || (ativa.dataset.view === "financeiro" && !fin))) {
-    trocarView("inicio");
+  if (ativa && ativa.dataset.view === "financeiro" && !fin) trocarView("inicio");
+  if (ativa && ativa.dataset.view === "ajustes" && !p.titular) {
+    const subAberta = document.querySelector(".aj-sub:not([hidden])");
+    if (subAberta && subAberta.dataset.aj !== "aparencia") trocarAjuste(null);
   }
 }
 
