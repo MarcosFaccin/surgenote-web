@@ -76,9 +76,12 @@ button{font-family:inherit;cursor:pointer}
 .btn-primario{background:var(--verde);color:#fff;width:100%;justify-content:center}
 .lc-cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;border:none;border-radius:12px;background:#E89B1C;color:#0A1E28;font-weight:700;font-size:1.05rem;padding:16px 34px;max-width:420px;width:100%;box-shadow:0 6px 18px rgba(232,155,28,.35);transition:filter .15s}
 .lc-cta:hover{filter:brightness(1.08)}
-.lc-ditar{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid #E89B1C;border-radius:12px;background:transparent;color:#E89B1C;font-weight:700;font-size:1rem;padding:14px 22px;transition:filter .15s}
+.lc-ditar{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid #E89B1C;border-radius:12px;background:transparent;color:#E89B1C;font-weight:700;font-size:1rem;padding:12px 15px;transition:filter .15s}
 .lc-ditar:hover{filter:brightness(1.08)}
-.lc-ditar svg{width:22px;height:22px;flex-shrink:0}
+.lc-ditar svg{width:24px;height:24px;flex-shrink:0}
+/* botão de voz estilo WhatsApp em TODAS as telas: só o microfone em repouso,
+   o texto volta enquanto grava/transcreve (pedido Marcos 16/07) */
+.lc-ditar:not(.gravando):not(.ocupado) .lc-dit-txt{display:none}
 .lc-ditar.gravando{background:var(--vermelho);border-color:var(--vermelho);color:#fff;animation:lcPulsa 1.2s infinite}
 @keyframes lcPulsa{50%{filter:brightness(1.25)}}
 .lc-linha-cta{display:flex;gap:10px;justify-content:center;align-items:stretch;flex-wrap:wrap}
@@ -522,9 +525,6 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
   /* lançar por voz vira botão só de microfone (estilo WhatsApp) na mesma linha */
   .lc-linha-cta{flex-wrap:nowrap}
   .lc-linha-cta .lc-cta{min-width:0}
-  .lc-ditar{padding:12px 15px}
-  .lc-ditar:not(.gravando):not(.ocupado) .lc-dit-txt{display:none}
-  .lc-ditar svg{width:24px;height:24px}
   /* uma coisa por tela: seções secundárias viram itens de menu */
   .v-menu{display:block;margin-top:16px}
   .v-sec{display:none !important}
@@ -1686,7 +1686,7 @@ function iniciarApp(sessao){
 /* ---------- tour de boas-vindas (1ª entrada; marca no banco) ---------- */
 const TOUR_PASSOS = [
   { alvo: null, titulo: "Bem-vindo ao SurgeNote! 👋",
-    texto: "Acabou a cirurgia? Mande um áudio, texto ou a foto do boletim no nosso WhatsApp e ela entra sozinha no painel. Salve o número:",
+    texto: "Acabou a cirurgia? Mande um áudio, texto ou a foto do boletim para a Ísis, sua assistente de IA no WhatsApp — ela registra tudo no painel. Salve o número:",
     zap: "https://wa.me/554137971797" },
   { alvo: "#lc-abrir", titulo: "Ou lance por aqui",
     texto: "O botão + Lançar cirurgia faz o mesmo registro à mão — útil para a secretária ou quando preferir digitar." },
@@ -1881,7 +1881,7 @@ function ligarRealtime(){
     .on("postgres_changes", { event: "*", schema: "public", table: "cirurgias" }, (payload) => {
       if (payload.eventType === "INSERT" && payload.new && payload.new.id) {
         recemChegadas.add(payload.new.id);
-        toast("Nova solicitação recebida pela Ísis");
+        toast("A Ísis registrou uma nova cirurgia — confira na fila.");
       }
       carregarTudo();
     })
@@ -2027,7 +2027,7 @@ function renderFila(linhas){
   $("fila-conta").textContent = linhas.length ? linhas.length + " pendente(s)" : "";
   const alvo = $("fila");
   if (!linhas.length) {
-    alvo.innerHTML = '<div class="vazio">Nenhuma solicitação pendente. Quando a Ísis registrar um pedido pelo WhatsApp, ele aparece aqui ao vivo.</div>';
+    alvo.innerHTML = '<div class="vazio">Nenhuma cirurgia aguardando confirmação. Quando a <b>Ísis</b>, sua assistente de IA no WhatsApp, registrar uma cirurgia, ela aparece aqui ao vivo para o seu OK.</div>';
     return;
   }
   alvo.innerHTML = "";
