@@ -548,6 +548,20 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .ac-item:hover{background:var(--verde-tinta)}
 .ac-nome{font-size:.88rem;color:var(--grafite);line-height:1.3}
 .ac-sub{font-size:.74rem;color:var(--cinza);margin-top:2px}
+/* tour de boas-vindas (1ª entrada) */
+.tour-foco{position:fixed;z-index:9000;border-radius:12px;pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(8,18,24,.62);transition:all .28s ease;border:2px solid rgba(255,255,255,.85)}
+.tour-foco.sem-alvo{border:none}
+.tour-balao{position:fixed;z-index:9001;background:var(--branco);color:var(--grafite);border-radius:14px;
+  box-shadow:0 14px 40px rgba(0,0,0,.35);padding:16px 16px 14px;max-width:330px;width:calc(100vw - 32px)}
+.tour-balao h3{font-family:var(--display);font-size:1rem;margin:0 0 6px}
+.tour-balao p{font-size:.85rem;color:var(--cinza);margin:0 0 12px;line-height:1.45}
+.tour-zap{display:inline-block;background:#25D366;color:#fff;text-decoration:none;border-radius:9px;
+  padding:9px 14px;font-weight:600;font-size:.85rem;margin-bottom:12px}
+.tour-acao{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.tour-passos{font-size:.75rem;color:var(--cinza)}
+.tour-pular{background:none;border:none;color:var(--cinza);font-size:.82rem;cursor:pointer;font-family:inherit;padding:6px}
+.tour-prox{background:var(--marca);color:#fff;border:none;border-radius:9px;padding:9px 18px;font-weight:600;cursor:pointer;font-family:inherit;font-size:.85rem}
 /* busca de procedimento em TELA CHEIA (só celular) */
 .bc-fundo{position:fixed;inset:0;z-index:9998;background:var(--branco);display:flex;flex-direction:column;animation:bcSobe .18s ease-out}
 @keyframes bcSobe{from{transform:translateY(28px);opacity:.5}to{transform:none;opacity:1}}
@@ -1010,6 +1024,10 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
         <button class="btn btn-recusar" id="ap-logo-remover" style="padding:7px 12px;font-size:.82rem">Remover</button>
       </div>
       <p class="ap-dica">PNG com fundo transparente fica melhor. A imagem é reduzida automaticamente.</p>
+    </div>
+    <div class="ap-grupo">
+      <span class="ap-rotulo">Primeiros passos</span>
+      <button class="btn" id="ap-rever-tour" style="padding:7px 12px;font-size:.82rem">Rever o tour de boas-vindas</button>
     </div>
         </div>
       </section>
@@ -1660,9 +1678,106 @@ function iniciarApp(sessao){
     carregarMinhaAssinatura();
     verificarAceite();
     setTimeout(mostrarGuiaInstalar, 2500);  // guia de instalação (após o app assentar)
+    setTimeout(tourTalvezIniciar, 1800);    // tour de boas-vindas (só na 1ª entrada)
   }
   carregarTudo();
 }
+
+/* ---------- tour de boas-vindas (1ª entrada; marca no banco) ---------- */
+const TOUR_PASSOS = [
+  { alvo: null, titulo: "Bem-vindo ao SurgeNote! 👋",
+    texto: "Acabou a cirurgia? Mande um áudio, texto ou a foto do boletim no nosso WhatsApp e ela entra sozinha no painel. Salve o número:",
+    zap: "https://wa.me/554137971797" },
+  { alvo: "#lc-abrir", titulo: "Ou lance por aqui",
+    texto: "O botão + Lançar cirurgia faz o mesmo registro à mão — útil para a secretária ou quando preferir digitar." },
+  { alvo: "#fila", titulo: "Fila de confirmação",
+    texto: "Todo lançamento passa por aqui: nada vira produção sem o seu OK. Dá para editar antes de confirmar." },
+  { alvo: '.aba[data-view="ajustes"]', titulo: "Ajustes ⚙️",
+    texto: "Sua tabela de valores, contratos por convênio, equipe, aparência e assinatura moram na engrenagem." },
+];
+let tourIdx = 0, tourFoco = null, tourBalao = null;
+function tourFechar(marcar){
+  if (tourFoco) { tourFoco.remove(); tourFoco = null; }
+  if (tourBalao) { tourBalao.remove(); tourBalao = null; }
+  window.removeEventListener("resize", tourPosicionar);
+  if (marcar) tourMarcarVisto();
+}
+async function tourMarcarVisto(){
+  try {
+    const medicoId = await mvMedicoId();
+    if (medicoId) await sb.from("medico_preferencias").upsert(
+      { medico_id: medicoId, tour_visto_em: new Date().toISOString() }, { onConflict: "medico_id" });
+  } catch (e) { /* silencioso — no pior caso o tour reaparece */ }
+}
+function tourPassosVisiveis(){
+  return TOUR_PASSOS.filter(p => !p.alvo || (document.querySelector(p.alvo) && document.querySelector(p.alvo).offsetParent !== null));
+}
+function tourPosicionar(){
+  const passos = tourPassosVisiveis();
+  const p = passos[tourIdx];
+  if (!p) return;
+  const alvo = p.alvo ? document.querySelector(p.alvo) : null;
+  if (alvo) alvo.scrollIntoView({ block: "center", behavior: "instant" });
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let r;
+  if (alvo) {
+    const a = alvo.getBoundingClientRect();
+    r = { left: a.left - 8, top: a.top - 8, width: a.width + 16, height: a.height + 16 };
+    tourFoco.classList.remove("sem-alvo");
+  } else {
+    r = { left: vw / 2, top: vh / 2, width: 0, height: 0 };
+    tourFoco.classList.add("sem-alvo");
+  }
+  Object.assign(tourFoco.style, { left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px" });
+  // balão: abaixo do alvo se couber, senão acima; sem alvo = centralizado
+  const bh = tourBalao.offsetHeight || 180, bw = Math.min(330, vw - 32);
+  let bx, by;
+  if (!alvo) { bx = (vw - bw) / 2; by = (vh - bh) / 2; }
+  else {
+    bx = Math.min(Math.max(16, r.left), vw - bw - 16);
+    by = (r.top + r.height + 12 + bh < vh) ? r.top + r.height + 12 : Math.max(16, r.top - bh - 12);
+  }
+  Object.assign(tourBalao.style, { left: bx + "px", top: by + "px" });
+}
+function tourRender(){
+  const passos = tourPassosVisiveis();
+  const p = passos[tourIdx];
+  if (!p) { tourFechar(true); return; }
+  const ultimo = tourIdx === passos.length - 1;
+  tourBalao.innerHTML =
+    "<h3></h3><p></p>" +
+    (p.zap ? '<a class="tour-zap" href="' + p.zap + '" target="_blank" rel="noopener">Abrir conversa no WhatsApp</a><br>' : "") +
+    '<div class="tour-acao"><button class="tour-pular" type="button">Pular</button>' +
+    '<span class="tour-passos">' + (tourIdx + 1) + " de " + passos.length + "</span>" +
+    '<button class="tour-prox" type="button">' + (ultimo ? "Concluir" : "Próximo") + "</button></div>";
+  tourBalao.querySelector("h3").textContent = p.titulo;
+  tourBalao.querySelector("p").textContent = p.texto;
+  tourBalao.querySelector(".tour-pular").addEventListener("click", () => tourFechar(true));
+  tourBalao.querySelector(".tour-prox").addEventListener("click", () => {
+    if (ultimo) tourFechar(true); else { tourIdx++; tourRender(); }
+  });
+  tourPosicionar();
+}
+function tourIniciar(){
+  tourFechar(false);
+  trocarView && typeof trocarView === "function" && trocarView("inicio");
+  tourIdx = 0;
+  tourFoco = document.createElement("div"); tourFoco.className = "tour-foco";
+  tourBalao = document.createElement("div"); tourBalao.className = "tour-balao";
+  document.body.appendChild(tourFoco); document.body.appendChild(tourBalao);
+  window.addEventListener("resize", tourPosicionar);
+  tourRender();
+}
+async function tourTalvezIniciar(){
+  try {
+    if (document.getElementById("aceite-overlay")) return; // 1º login com aceite pendente: tour fica p/ a próxima
+    const { data } = await sb.from("medico_preferencias").select("tour_visto_em").maybeSingle();
+    if (!data || !data.tour_visto_em) tourIniciar();
+  } catch (e) { /* sem drama */ }
+}
+document.addEventListener("click", e => {
+  if (e.target && e.target.id === "ap-rever-tour") tourIniciar();
+});
 
 /* ---------- aceite de Termos/Privacidade no primeiro login (Trilha C) ----------
    Médico titular sem aceite registrado (ex.: cadastro assistido pela iddeia)
