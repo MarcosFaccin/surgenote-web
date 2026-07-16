@@ -73,6 +73,13 @@ button{font-family:inherit;cursor:pointer}
 .btn-primario{background:var(--verde);color:#fff;width:100%;justify-content:center}
 .lc-cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;border:none;border-radius:12px;background:#E89B1C;color:#0A1E28;font-weight:700;font-size:1.05rem;padding:16px 34px;max-width:420px;width:100%;box-shadow:0 6px 18px rgba(232,155,28,.35);transition:filter .15s}
 .lc-cta:hover{filter:brightness(1.08)}
+.lc-ditar{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid #E89B1C;border-radius:12px;background:transparent;color:#E89B1C;font-weight:700;font-size:1rem;padding:14px 22px;transition:filter .15s}
+.lc-ditar:hover{filter:brightness(1.08)}
+.lc-ditar.gravando{background:var(--vermelho);border-color:var(--vermelho);color:#fff;animation:lcPulsa 1.2s infinite}
+@keyframes lcPulsa{50%{filter:brightness(1.25)}}
+.lc-linha-cta{display:flex;gap:10px;justify-content:center;align-items:stretch;flex-wrap:wrap}
+.lc-linha-cta .lc-cta{width:auto;flex:1;max-width:420px;min-width:200px}
+.lc-transc{font-size:.82rem;color:var(--cinza);background:var(--verde-tinta);border-radius:9px;padding:10px 12px;margin:0 0 12px;text-align:left}
 .btn-confirmar{background:var(--verde);color:#fff;padding:8px 14px;font-size:.88rem}
 .btn-recusar{background:transparent;color:var(--vermelho);border:1px solid var(--vermelho);padding:8px 14px;font-size:.88rem}
 .btn-recusar:hover{background:var(--vermelho-tinta)}
@@ -618,8 +625,12 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 
     <div class="view ativa" data-view="inicio">
     <section class="painel" aria-label="Lançamento manual de cirurgia" style="text-align:center;margin-bottom:16px">
-      <button class="lc-cta" id="lc-abrir">+ Lançar cirurgia</button>
+      <div class="lc-linha-cta">
+        <button class="lc-cta" id="lc-abrir">+ Lançar cirurgia</button>
+        <button class="lc-ditar" id="lc-ditar" title="Ditar a cirurgia por áudio">🎤 Ditar</button>
+      </div>
       <div class="painel-corpo" id="lc-form" style="text-align:left" hidden>
+        <p class="lc-transc" id="lc-transc" hidden></p>
         <p style="font-size:.76rem;color:var(--cinza);margin:0 0 12px">O mesmo registro do WhatsApp, feito à mão — útil quando quem lança não usa o WhatsApp. A data decide: já aconteceu → Fila de confirmação; data futura → vira agendamento (agenda + Google).</p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
           <label class="campo" style="margin:0"><span>Data e hora *</span><input type="datetime-local" id="lc-data"></label>
@@ -1223,6 +1234,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("ag-cancelar").addEventListener("click", () => { $("ag-form").hidden = true; });
   $("ag-salvar").addEventListener("click", agCriar);
   $("lc-abrir").addEventListener("click", () => { $("lc-form").hidden = !$("lc-form").hidden; });
+  $("lc-ditar").addEventListener("click", ditToggle);
   $("lc-fechar").addEventListener("click", () => { $("lc-form").hidden = true; });
   $("lc-salvar").addEventListener("click", lcCriar);
   $("lc-proc").addEventListener("input", () => {
@@ -2095,6 +2107,7 @@ async function lcCriar(){
   });
   if (!ok) return;
   ["lc-data","lc-proc","lc-pac","lc-hosp","lc-conv","lc-valor"].forEach(id => $(id).value = "");
+  $("lc-transc").hidden = true;
   lcItens = []; chipsRender("lc-chips", lcItens);
   $("lc-form").hidden = true;
   carregarTudo();
@@ -3120,6 +3133,86 @@ async function consultarTabelas(){
   });
   alvo.innerHTML = html + '</table>' +
     '<p style="font-size:.75rem;color:var(--cinza);margin-top:8px">Valores de referência (CBHPM/SUS) — não substituem a tabela contratual de cada convênio.</p>';
+}
+
+/* ---------- ditado por áudio (preenche o formulário; nada grava sem o Lançar) ---------- */
+let ditRec = null, ditTimer = null, ditIni = 0;
+
+function ditSuportado(){ return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder); }
+
+async function ditToggle(){
+  if (ditRec && ditRec.state === "recording") { ditRec.stop(); return; }
+  if (!ditSuportado()) { toast("Este navegador não suporta gravação de áudio.", true); return; }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch (e) { toast("Microfone negado — libere o acesso nas permissões do navegador.", true); return; }
+  const tipo = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm"
+    : MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : "";
+  const pedacos = [];
+  ditRec = tipo ? new MediaRecorder(stream, { mimeType: tipo }) : new MediaRecorder(stream);
+  ditRec.ondataavailable = ev => { if (ev.data && ev.data.size) pedacos.push(ev.data); };
+  ditRec.onstop = async () => {
+    clearInterval(ditTimer);
+    stream.getTracks().forEach(t => t.stop());
+    const btn = $("lc-ditar");
+    btn.classList.remove("gravando");
+    const blob = new Blob(pedacos, { type: ditRec.mimeType || tipo || "audio/webm" });
+    ditRec = null;
+    if (blob.size < 1000) { btn.textContent = "🎤 Ditar"; toast("Áudio muito curto — tente de novo.", true); return; }
+    btn.disabled = true; btn.textContent = "Transcrevendo…";
+    try { await ditEnviar(blob); }
+    catch (e) { toast("Ditado falhou: " + (e.message || e), true); }
+    btn.disabled = false; btn.textContent = "🎤 Ditar";
+  };
+  ditRec.start();
+  ditIni = Date.now();
+  const btn = $("lc-ditar");
+  btn.classList.add("gravando");
+  ditTimer = setInterval(() => {
+    const s = Math.floor((Date.now() - ditIni) / 1000);
+    btn.textContent = "■ Parar (" + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") + ")";
+    if (s >= 90 && ditRec && ditRec.state === "recording") ditRec.stop(); // limite de 90s
+  }, 500);
+  btn.textContent = "■ Parar (0:00)";
+}
+
+async function ditEnviar(blob){
+  const buf = new Uint8Array(await blob.arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  const { data: sess } = await sb.auth.getSession();
+  const resp = await fetch(SUPABASE_URL + "/functions/v1/ditado-cirurgia", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + sess.session.access_token, "apikey": SUPABASE_ANON_KEY },
+    body: JSON.stringify({ audio_b64: btoa(bin), mime: blob.type })
+  });
+  const r = await resp.json();
+  if (!resp.ok) throw new Error(r.erro || ("Erro " + resp.status));
+  ditPreencher(r.transcricao, r.campos || {});
+}
+
+async function ditPreencher(transcricao, c){
+  $("lc-form").hidden = false;
+  const tr = $("lc-transc");
+  tr.textContent = "🎤 Você ditou: “" + transcricao + "” — confira os campos antes de lançar.";
+  tr.hidden = false;
+  if (c.data_hora) $("lc-data").value = String(c.data_hora).slice(0, 16);
+  if (c.paciente) $("lc-pac").value = c.paciente;
+  if (c.hospital) $("lc-hosp").value = c.hospital;
+  if (c.convenio) $("lc-conv").value = c.convenio;
+  if (c.valor != null && c.valor !== "") $("lc-valor").value = Number(c.valor);
+  if (c.procedimento) {
+    $("lc-proc").value = c.procedimento;
+    // tenta casar com o catálogo (mesma busca do autocomplete) p/ nome exato + valor
+    try {
+      const itens = await buscarProcedimentosTodos(c.procedimento);
+      if (itens.length) {
+        $("lc-proc").value = itens[0].nome;
+        if (!$("lc-valor").value) await lcPreencherValor();
+      }
+    } catch (e) { /* fica o texto ditado; o médico escolhe na lista */ }
+  }
+  toast("Formulário preenchido pelo ditado — revise e clique em Lançar.");
 }
 
 async function buscarProcedimentosTodos(termo){
