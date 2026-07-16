@@ -239,6 +239,26 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 /* "uma coisa por tela" no celular (Agenda/Financeiro): menu e voltar só existem no mobile */
 .v-menu{display:none}
 .v-voltar{display:none}
+/* ---------- roleta estilo iOS (datas, horas e listas) ---------- */
+.rd-fundo{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:80;display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .2s}
+.rd-fundo.aberta{opacity:1}
+.rd-sheet{background:var(--branco);border-radius:16px 16px 0 0;width:100%;max-width:430px;
+  transform:translateY(100%);transition:transform .28s cubic-bezier(.32,.72,.3,1);
+  padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -10px 40px rgba(0,0,0,.25)}
+.rd-fundo.aberta .rd-sheet{transform:none}
+.rd-cab{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--linha)}
+.rd-cab button{background:none;border:none;font-size:.98rem;font-weight:600;font-family:inherit;color:var(--marca);padding:8px 10px;cursor:pointer}
+.rd-cab .rd-ok{font-weight:700}
+.rd-cab .rd-titulo{font-size:.88rem;font-weight:600;color:var(--cinza);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rd-colunas{display:flex;position:relative;height:216px;overflow:hidden}
+.rd-col{flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;padding:90px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch;position:relative;z-index:1}
+.rd-col::-webkit-scrollbar{display:none}
+.rd-item{height:36px;line-height:36px;text-align:center;scroll-snap-align:center;font-size:1.05rem;
+  color:var(--grafite);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px;cursor:pointer}
+.rd-colunas::before{content:"";position:absolute;left:10px;right:10px;top:90px;height:36px;background:var(--verde-tinta);border-radius:9px;pointer-events:none;z-index:0}
+.rd-colunas::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:linear-gradient(var(--branco),transparent 32%,transparent 68%,var(--branco))}
+@media (min-width:641px){.rd-fundo{align-items:center;padding:20px}.rd-sheet{border-radius:16px}}
 .ap-grupo{margin-bottom:16px}
 .ap-grupo:last-child{margin-bottom:2px}
 .ap-rotulo{display:block;font-size:.72rem;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--cinza);margin-bottom:8px}
@@ -1089,6 +1109,115 @@ function trocarView(nome){
   try { history.replaceState(null, "", "#" + nome); } catch (e) {}
   window.scrollTo({ top: 0 });
 }
+/* ---------- roleta estilo iOS (datas, horas e listas) ---------- */
+let rdAtual = null;
+const RD_ALT = 36; // altura de cada item da roleta (bater com o CSS .rd-item)
+
+function rodaAbrir(titulo, colunas, onOk){
+  rodaFechar();
+  const fundo = document.createElement("div");
+  fundo.className = "rd-fundo";
+  fundo.innerHTML = '<div class="rd-sheet">' +
+    '<div class="rd-cab"><button type="button" class="rd-cancelar">Cancelar</button>' +
+    '<span class="rd-titulo"></span><button type="button" class="rd-ok">OK</button></div>' +
+    '<div class="rd-colunas"></div></div>';
+  fundo.querySelector(".rd-titulo").textContent = titulo || "";
+  const wrap = fundo.querySelector(".rd-colunas");
+  colunas.forEach(c => {
+    const col = document.createElement("div");
+    col.className = "rd-col";
+    if (c.flex) col.style.flex = c.flex;
+    c.itens.forEach(it => {
+      const d = document.createElement("div");
+      d.className = "rd-item"; d.textContent = it.t; d.dataset.v = it.v;
+      col.appendChild(d);
+    });
+    wrap.appendChild(col);
+    const i = Math.max(0, c.itens.findIndex(it => String(it.v) === String(c.sel)));
+    requestAnimationFrame(() => { col.scrollTop = i * RD_ALT; });
+    col.addEventListener("click", ev => {
+      const it = ev.target.closest(".rd-item");
+      if (it) col.scrollTo({ top: [...col.children].indexOf(it) * RD_ALT, behavior: "smooth" });
+    });
+  });
+  fundo.querySelector(".rd-cancelar").addEventListener("click", rodaFechar);
+  fundo.addEventListener("pointerdown", ev => { if (ev.target === fundo) rodaFechar(); });
+  fundo.querySelector(".rd-ok").addEventListener("click", () => {
+    const vals = [...wrap.children].map(col => {
+      const i = Math.min(col.children.length - 1, Math.max(0, Math.round(col.scrollTop / RD_ALT)));
+      return col.children[i].dataset.v;
+    });
+    rodaFechar();
+    onOk(vals);
+  });
+  document.body.appendChild(fundo);
+  requestAnimationFrame(() => fundo.classList.add("aberta"));
+  rdAtual = fundo;
+}
+function rodaFechar(){ if (rdAtual) { rdAtual.remove(); rdAtual = null; } }
+
+/* colunas prontas: dias (−1 ano até +1 ano, "Hoje" no centro) e números 00–NN */
+function rdDatas(){
+  const itens = [], base = new Date(); base.setHours(0, 0, 0, 0);
+  for (let d = -365; d <= 370; d++){
+    const dt = new Date(base); dt.setDate(base.getDate() + d);
+    const v = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0");
+    const t = d === 0 ? "Hoje" : dt.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" });
+    itens.push({ v, t });
+  }
+  return itens;
+}
+function rdNums(n0, n1){
+  const a = [];
+  for (let n = n0; n <= n1; n++) a.push({ v: String(n).padStart(2, "0"), t: String(n).padStart(2, "0") });
+  return a;
+}
+function rdTituloDe(el){
+  const rot = el.closest("label")?.querySelector("span");
+  return (rot ? rot.textContent : "").replace(/\s*\*\s*$/, "");
+}
+function rdData(v){ return (v && !isNaN(new Date(v))) ? new Date(v) : new Date(); }
+
+/* delegação: datas/horas SEMPRE na roleta; selects na roleta só no celular */
+function rodaPara(el){
+  if (el.disabled) return false;
+  if (el.tagName === "SELECT"){
+    if (window.innerWidth > 640) return false;
+    const itens = [...el.options].map(o => ({ v: o.value, t: o.textContent }));
+    if (!itens.length) return false;
+    rodaAbrir(rdTituloDe(el) || "Escolher", [{ itens, sel: el.value }],
+      v => { el.value = v[0]; el.dispatchEvent(new Event("change", { bubbles: true })); });
+    return true;
+  }
+  const dt = rdData(el.value);
+  const dv = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0");
+  if (el.type === "date"){
+    rodaAbrir(rdTituloDe(el) || "Data", [{ itens: rdDatas(), sel: dv }],
+      v => { el.value = v[0]; el.dispatchEvent(new Event("change", { bubbles: true })); });
+    return true;
+  }
+  if (el.type === "datetime-local"){
+    rodaAbrir(rdTituloDe(el) || "Data e hora", [
+      { itens: rdDatas(), sel: dv, flex: "2.4" },
+      { itens: rdNums(0, 23), sel: String(dt.getHours()).padStart(2, "0") },
+      { itens: rdNums(0, 59), sel: String(dt.getMinutes()).padStart(2, "0") }
+    ], v => { el.value = v[0] + "T" + v[1] + ":" + v[2]; el.dispatchEvent(new Event("change", { bubbles: true })); });
+    return true;
+  }
+  return false;
+}
+document.addEventListener("pointerdown", ev => {
+  const el = ev.target.closest && ev.target.closest('input[type="datetime-local"],input[type="date"],select');
+  if (!el || (rdAtual && rdAtual.contains(ev.target))) return;
+  if (rodaPara(el)) { ev.preventDefault(); el.blur(); }
+});
+document.addEventListener("focusin", ev => {
+  const el = ev.target;
+  if (!el.matches || !el.matches('input[type="datetime-local"],input[type="date"]')) return;
+  if (rdAtual) { el.blur(); return; }
+  if (rodaPara(el)) el.blur();
+});
+
 /* "uma coisa por tela" no celular (Agenda/Financeiro): abre uma seção secundária (null = fecha) */
 function trocarSub(view, nome){
   const v = document.querySelector('.view[data-view="' + view + '"]');
@@ -1354,6 +1483,15 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("cal-prev").addEventListener("click", () => calNavegar(-1));
   $("cal-prox").addEventListener("click", () => calNavegar(1));
   $("cal-hoje").addEventListener("click", () => { calAncora = new Date(); carregarCalendario(); });
+  // swipe horizontal no calendário (estilo app): esquerda = próximo, direita = anterior
+  let calSwX = null, calSwY = null;
+  $("cal-corpo").addEventListener("touchstart", e => { calSwX = e.touches[0].clientX; calSwY = e.touches[0].clientY; }, { passive: true });
+  $("cal-corpo").addEventListener("touchend", e => {
+    if (calSwX === null) return;
+    const dx = e.changedTouches[0].clientX - calSwX, dy = e.changedTouches[0].clientY - calSwY;
+    calSwX = null;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > 1.6 * Math.abs(dy)) calNavegar(dx < 0 ? 1 : -1);
+  }, { passive: true });
   $("ag-novo-btn").addEventListener("click", () => { $("ag-form").hidden = !$("ag-form").hidden; });
   $("ag-cancelar").addEventListener("click", () => { $("ag-form").hidden = true; });
   $("ag-salvar").addEventListener("click", agCriar);
