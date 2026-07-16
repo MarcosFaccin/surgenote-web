@@ -229,8 +229,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
   }
   .aba{flex-direction:column;gap:3px;padding:6px 14px;font-size:.66rem;letter-spacing:.02em}
   .aba svg{width:21px;height:21px}
-  .aba[data-view="ajustes"] .aba-rotulo{display:none}
-  .aba[data-view="ajustes"] svg{width:24px;height:24px}
+  /* engrenagem com rótulo "Ajustes" igual às demais abas (pedido 16/07) */
   main{padding-bottom:96px}
 }
 
@@ -666,7 +665,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
     <section class="painel" aria-label="Lançamento manual de cirurgia" style="text-align:center;margin-bottom:16px">
       <div class="lc-linha-cta">
         <button class="lc-cta" id="lc-abrir">+ Lançar cirurgia</button>
-        <button class="lc-consulta so-titular" id="lc-consulta" title="Consultar as tabelas CBHPM/SUS">
+        <button class="lc-consulta" id="lc-consulta" title="Consultar as tabelas CBHPM/SUS">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
           <span>Consultar tabelas</span>
         </button>
@@ -866,7 +865,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
           <button class="aj-item so-titular" data-aj="equipe" type="button"><span class="aj-ico">👥</span><span>Minha equipe</span><span class="aj-seta">›</span></button>
         </div>
         <div class="aj-lista">
-          <button class="aj-item so-titular" data-aj="consulta" type="button"><span class="aj-ico">📖</span><span>Consulta CBHPM/SUS</span><span class="aj-seta">›</span></button>
+          <button class="aj-item" data-aj="consulta" type="button"><span class="aj-ico">📖</span><span>Consulta CBHPM/SUS</span><span class="aj-seta">›</span></button>
           <button class="aj-item" data-aj="aparencia" type="button"><span class="aj-ico">🎨</span><span>Aparência e privacidade</span><span class="aj-seta">›</span></button>
         </div>
       </div>
