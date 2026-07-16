@@ -962,11 +962,11 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
     <section class="painel" aria-label="Minha equipe">
       <div class="painel-cab"><h2>Minha equipe</h2><span class="conta" id="eq-conta"></span></div>
       <div class="painel-corpo">
-        <p style="font-size:.82rem;color:var(--cinza);margin-bottom:12px">Até 2 pessoas (secretária/instrumentadora) com login próprio. Elas alimentam a produção (cirurgias, agenda) e só veem o financeiro se você permitir.</p>
+        <p style="font-size:.82rem;color:var(--cinza);margin-bottom:12px">Até 2 pessoas (secretário(a)/instrumentador(a)) com login próprio. Elas alimentam a produção (cirurgias, agenda) e só veem o financeiro se você permitir.</p>
         <div id="equipe-lista"></div>
         <div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px">
           <label class="campo" style="margin:0"><span>Nome *</span><input id="eq-nome" placeholder="Maria da Silva"></label>
-          <label class="campo" style="margin:0"><span>Função</span><select id="eq-papel" class="sel-status" style="width:100%;padding:11px 9px"><option value="secretaria">Secretária</option><option value="instrumentadora">Instrumentadora</option><option value="outro">Outro</option></select></label>
+          <label class="campo" style="margin:0"><span>Função</span><select id="eq-papel" class="sel-status" style="width:100%;padding:11px 9px"><option value="secretaria">Secretário(a)</option><option value="instrumentadora">Instrumentador(a)</option><option value="outro">Outro</option></select></label>
           <label class="campo" style="margin:0"><span>E-mail (login) *</span><input id="eq-email" type="email" placeholder="maria@exemplo.com"></label>
           <label class="campo" style="margin:0"><span>Senha inicial * (mín. 8)</span><input id="eq-senha" type="text" placeholder="senha provisória"></label>
         </div>
@@ -1689,7 +1689,7 @@ const TOUR_PASSOS = [
     texto: "Acabou a cirurgia? Mande um áudio, texto ou a foto do boletim para a Ísis, sua assistente de IA no WhatsApp — ela registra tudo no painel. Salve o número:",
     zap: "https://wa.me/554137971797" },
   { alvo: "#lc-abrir", titulo: "Ou lance por aqui",
-    texto: "O botão + Lançar cirurgia faz o mesmo registro à mão — útil para a secretária ou quando preferir digitar." },
+    texto: "O botão + Lançar cirurgia faz o mesmo registro à mão — útil para a equipe ou quando preferir digitar." },
   { alvo: "#fila", titulo: "Fila de confirmação",
     texto: "Todo lançamento passa por aqui: nada vira produção sem o seu OK. Dá para editar antes de confirmar." },
   { alvo: '.aba[data-view="ajustes"]', titulo: "Ajustes ⚙️",
@@ -3441,7 +3441,7 @@ async function carregarEquipe(){
   if (error) { alvo.innerHTML = '<div class="vazio">' + escHtml(error.message) + '</div>'; return; }
   const ativos = (data || []).filter(m => m.ativo);
   $("eq-conta").textContent = ativos.length ? ativos.length + "/2 ativo(s)" : "";
-  if (!(data || []).length) { alvo.innerHTML = '<div class="vazio">Nenhum membro ainda. Crie o acesso da sua secretária abaixo.</div>'; return; }
+  if (!(data || []).length) { alvo.innerHTML = '<div class="vazio">Nenhum membro ainda. Crie o acesso da sua equipe (secretário(a), instrumentador(a)) abaixo.</div>'; return; }
   alvo.innerHTML = "";
   data.forEach(m => {
     const div = document.createElement("div");
