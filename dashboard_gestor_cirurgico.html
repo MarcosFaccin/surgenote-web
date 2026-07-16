@@ -480,6 +480,8 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .chips-proc{display:none;flex-wrap:wrap;gap:6px;margin-top:10px}
 .chip-proc{display:inline-flex;align-items:center;gap:6px;background:var(--verde-tinta);color:var(--titulo);border:1px solid var(--linha);border-radius:99px;padding:4px 10px;font-size:.78rem}
 .chip-proc button{background:none;border:none;color:var(--vermelho);cursor:pointer;font-size:.85rem;padding:0;line-height:1}
+.chip-proc .chip-via{color:var(--cinza);border:1px solid var(--linha);border-radius:99px;padding:1px 8px;font-size:.7rem}
+.chip-proc .chip-via:hover{color:var(--titulo);border-color:var(--titulo)}
 
 /* autocomplete próprio (o datalist nativo corta nomes longos no Safari) */
 .ac-box{position:absolute;z-index:2000;background:var(--branco);border:1px solid var(--linha);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:280px;overflow-y:auto}
@@ -640,6 +642,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
           <label class="campo" style="margin:0"><span>Convênio</span><input id="lc-conv" placeholder="ex.: Unimed, Particular"></label>
           <label class="campo" style="margin:0"><span>Valor previsto (R$)</span><input type="number" id="lc-valor" step="0.01" min="0" placeholder="preenchido ao escolher"></label>
         </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.85rem;color:var(--grafite);cursor:pointer"><input type="checkbox" id="lc-urg"> ⚡ Urgência/emergência (aplica o acréscimo do contrato — padrão +30%)</label>
         <div id="lc-chips" class="chips-proc"></div>
         <button class="btn" id="lc-add-outro" type="button" style="margin-top:10px;padding:6px 12px;font-size:.78rem;background:var(--verde-tinta);color:var(--titulo)">+ adicionar outro procedimento</button>
         <div class="acoes" style="margin-top:14px">
@@ -726,6 +729,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
               <label class="campo" style="margin:0"><span>Convênio</span><input id="ag-conv" placeholder="ex.: Unimed, Particular"></label>
               <label class="campo" style="margin:0"><span>Valor previsto (R$)</span><input type="number" id="ag-valor" step="0.01" min="0" placeholder="preenchido ao escolher"></label>
             </div>
+            <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.85rem;color:var(--grafite);cursor:pointer"><input type="checkbox" id="ag-urg"> ⚡ Urgência/emergência (aplica o acréscimo do contrato — padrão +30%)</label>
             <div id="ag-chips" class="chips-proc"></div>
             <button class="btn" id="ag-add-outro" type="button" style="margin-top:10px;padding:6px 12px;font-size:.78rem;background:var(--verde-tinta);color:var(--titulo)">+ adicionar outro procedimento</button>
             <div class="acoes" style="margin-top:14px">
@@ -1999,7 +2003,12 @@ function acMostrar(inp, itens){
   document.body.appendChild(acBox);
 }
 document.addEventListener("click", e => { if (acBox && e.target !== acInput && !acBox.contains(e.target)) acFechar(); });
-document.addEventListener("scroll", () => acFechar(), true);
+document.addEventListener("scroll", (e) => {
+  // rolar DENTRO da lista de sugestões não fecha (bug apontado na demo:
+  // a lista fechava ao tentar navegar nas opções)
+  if (acBox && (e.target === acBox || acBox.contains(e.target))) return;
+  acFechar();
+}, true);
 
 /* ---------- sugestões de hospital/convênio já cadastrados (anti-duplicidade) ---------- */
 async function sugerirCatalogo(inpId, tabela){
@@ -2033,10 +2042,11 @@ async function agSugerirProcedimentos(){
 async function agCriar(){
   const ok = await criarCirurgiaDash({
     itens: agItens, procId: "ag-proc", dataId: "ag-data", pacId: "ag-pac",
-    hospId: "ag-hosp", convId: "ag-conv", valorId: "ag-valor", btnId: "ag-salvar"
+    hospId: "ag-hosp", convId: "ag-conv", valorId: "ag-valor", btnId: "ag-salvar", urgId: "ag-urg"
   });
   if (!ok) return;
   ["ag-data","ag-proc","ag-pac","ag-hosp","ag-conv","ag-valor"].forEach(id => $(id).value = "");
+  $("ag-urg").checked = false;
   agItens = []; chipsRender("ag-chips", agItens);
   $("ag-form").hidden = true;
   carregarTudo();
@@ -2069,15 +2079,20 @@ let lcItens = [], agItens = [];
 function chipsRender(alvoId, arr){
   const alvo = $(alvoId);
   alvo.innerHTML = "";
-  arr.forEach((nome, i) => {
+  arr.forEach((item, i) => {
     const c = document.createElement("span");
     c.className = "chip-proc";
     const t = document.createElement("span");
-    t.textContent = (i + 1) + "º · " + nome;
+    t.textContent = (i + 1) + "º · " + item.nome;
+    const v = document.createElement("button");
+    v.type = "button"; v.className = "chip-via";
+    v.textContent = item.outraVia ? "outra via" : "mesma via";
+    v.title = "Alternar via de acesso: outra via/incisão paga 100% pela CBHPM (mesma via: 2º proc 70%, 3º+ 50%)";
+    v.addEventListener("click", () => { item.outraVia = !item.outraVia; chipsRender(alvoId, arr); });
     const x = document.createElement("button");
     x.type = "button"; x.title = "Remover"; x.textContent = "✕";
     x.addEventListener("click", () => { arr.splice(i, 1); chipsRender(alvoId, arr); });
-    c.append(t, x);
+    c.append(t, v, x);
     alvo.appendChild(c);
   });
   alvo.style.display = arr.length ? "flex" : "none";
@@ -2086,7 +2101,7 @@ function addOutroProc(inputId, arr, chipsId){
   const inp = $(inputId);
   const nome = inp.value.trim();
   if (nome.length < 3) { toast("Escolha o procedimento antes de adicionar outro.", true); return; }
-  arr.push(nome);
+  arr.push({ nome: nome, outraVia: false });
   chipsRender(chipsId, arr);
   inp.value = "";
   inp.focus();
@@ -2103,11 +2118,11 @@ async function valorBaseDoProcedimento(nome){
   if (pr) return { procedimento_id: null, valor: Number(pr.valor || 0) };
   return { procedimento_id: null, valor: 0 };
 }
-async function gravarComposicao(cirurgiaId, nomes){
+async function gravarComposicao(cirurgiaId, itens){
   const linhas = [];
-  for (const nome of nomes) {
-    const v = await valorBaseDoProcedimento(nome);
-    linhas.push({ cirurgia_id: cirurgiaId, procedimento_id: v.procedimento_id, nome: nome, valor_base: v.valor, mesma_via: true });
+  for (const item of itens) {
+    const v = await valorBaseDoProcedimento(item.nome);
+    linhas.push({ cirurgia_id: cirurgiaId, procedimento_id: v.procedimento_id, nome: item.nome, valor_base: v.valor, mesma_via: !item.outraVia });
   }
   const { error } = await sb.from("cirurgia_itens").insert(linhas);
   if (error) { toast("Registro criado, mas a composição falhou: " + error.message, true); return; }
@@ -2117,11 +2132,12 @@ async function gravarComposicao(cirurgiaId, nomes){
 /* formulário único: a DATA decide — futura vira agendamento (confirmada, vai ao
    Google Agenda), passada/agora vira produção (Fila de confirmação). */
 async function criarCirurgiaDash(cfg){
-  const nomes = cfg.itens.slice();
+  const itens = cfg.itens.slice();
   const procAtual = $(cfg.procId).value.trim();
-  if (procAtual) nomes.push(procAtual);
+  if (procAtual) itens.push({ nome: procAtual, outraVia: false });
+  const urgente = cfg.urgId ? $(cfg.urgId).checked : false;
   const dataTxt = $(cfg.dataId).value;
-  if (!dataTxt || !nomes.length) { toast("Preencha data/hora e procedimento.", true); return false; }
+  if (!dataTxt || !itens.length) { toast("Preencha data/hora e procedimento.", true); return false; }
   const quando = new Date(dataTxt);
   if (isNaN(quando)) { toast("Data inválida.", true); return false; }
   const medicoId = await mvMedicoId();
@@ -2133,20 +2149,21 @@ async function criarCirurgiaDash(cfg){
   const valor = cfg.valorId ? Number($(cfg.valorId).value) : 0;
   const { data: nova, error } = await sb.from("cirurgias").insert({
     medico_id: medicoId,
-    nome_procedimento: nomes[0],
+    nome_procedimento: itens[0].nome,
     paciente_nome: $(cfg.pacId).value.trim() || null,
     hospital_nome: $(cfg.hospId).value.trim() || null,
     convenio_nome: cfg.convId ? ($(cfg.convId).value.trim() || null) : null,
     data_cirurgia: quando.toISOString(),
     valor_previsto: valor > 0 ? valor : null,
+    urgencia: urgente,
     status: futura ? "confirmada" : "aguardando_confirmacao",
     protocolo: (futura ? "AG-" : "MN-") + Date.now().toString(36).toUpperCase(),
     observacoes: futura ? "Agendado pelo dashboard" : "Lançado manualmente pelo dashboard"
   }).select("id").single();
   if (error) { btn.disabled = false; btn.textContent = rotulo; toast("Não foi possível salvar: " + error.message, true); return false; }
-  if (nomes.length > 1) await gravarComposicao(nova.id, nomes);
+  if (itens.length > 1 || urgente) await gravarComposicao(nova.id, itens);
   btn.disabled = false; btn.textContent = rotulo;
-  const extra = nomes.length > 1 ? " (" + nomes.length + " procedimentos, valor calculado pelo contrato)" : "";
+  const extra = itens.length > 1 ? " (" + itens.length + " procedimentos, valor calculado pelo contrato)" : (urgente ? " (urgência aplicada pelo contrato)" : "");
   toast(futura
     ? "Agendamento criado" + extra + " — vai para o Google Agenda em até 5 min."
     : "Cirurgia registrada" + extra + " — entrou na Fila de confirmação.");
@@ -2156,10 +2173,11 @@ async function criarCirurgiaDash(cfg){
 async function lcCriar(){
   const ok = await criarCirurgiaDash({
     itens: lcItens, procId: "lc-proc", dataId: "lc-data", pacId: "lc-pac",
-    hospId: "lc-hosp", convId: "lc-conv", valorId: "lc-valor", btnId: "lc-salvar"
+    hospId: "lc-hosp", convId: "lc-conv", valorId: "lc-valor", btnId: "lc-salvar", urgId: "lc-urg"
   });
   if (!ok) return;
   ["lc-data","lc-proc","lc-pac","lc-hosp","lc-conv","lc-valor"].forEach(id => $(id).value = "");
+  $("lc-urg").checked = false;
   $("lc-transc").hidden = true;
   lcItens = []; chipsRender("lc-chips", lcItens);
   $("lc-form").hidden = true;
