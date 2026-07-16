@@ -71,6 +71,8 @@ button{font-family:inherit;cursor:pointer}
 .btn{display:inline-flex;align-items:center;gap:8px;border:none;border-radius:8px;padding:11px 18px;font-weight:600;font-size:.95rem;transition:filter .15s}
 .btn:hover{filter:brightness(1.08)}
 .btn-primario{background:var(--verde);color:#fff;width:100%;justify-content:center}
+.lc-cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;border:none;border-radius:12px;background:var(--verde);color:#fff;font-weight:700;font-size:1.05rem;padding:16px 34px;max-width:420px;width:100%;box-shadow:0 6px 18px color-mix(in srgb, var(--verde) 35%, transparent);transition:filter .15s}
+.lc-cta:hover{filter:brightness(1.08)}
 .btn-confirmar{background:var(--verde);color:#fff;padding:8px 14px;font-size:.88rem}
 .btn-recusar{background:transparent;color:var(--vermelho);border:1px solid var(--vermelho);padding:8px 14px;font-size:.88rem}
 .btn-recusar:hover{background:var(--vermelho-tinta)}
@@ -615,6 +617,28 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
     <div class="faixa-erro" id="faixa-erro" hidden></div>
 
     <div class="view ativa" data-view="inicio">
+    <section class="painel" aria-label="Lançamento manual de cirurgia" style="text-align:center">
+      <button class="lc-cta" id="lc-abrir">+ Lançar cirurgia</button>
+      <div class="painel-corpo" id="lc-form" style="text-align:left" hidden>
+        <p style="font-size:.76rem;color:var(--cinza);margin:0 0 12px">O mesmo registro do WhatsApp, feito à mão — útil quando quem lança não usa o WhatsApp. A data decide: já aconteceu → Fila de confirmação; data futura → vira agendamento (agenda + Google).</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+          <label class="campo" style="margin:0"><span>Data e hora *</span><input type="datetime-local" id="lc-data"></label>
+          <label class="campo" style="margin:0"><span>Procedimento *</span><input id="lc-proc" placeholder="digite 3+ letras" autocomplete="off"></label>
+          <label class="campo" style="margin:0"><span>Paciente</span><input id="lc-pac" placeholder="nome do paciente"></label>
+          <label class="campo" style="margin:0"><span>Hospital</span><input id="lc-hosp" placeholder="local"></label>
+          <label class="campo" style="margin:0"><span>Convênio</span><input id="lc-conv" placeholder="ex.: Unimed, Particular"></label>
+          <label class="campo" style="margin:0"><span>Valor previsto (R$)</span><input type="number" id="lc-valor" step="0.01" min="0" placeholder="preenchido ao escolher"></label>
+        </div>
+        <div id="lc-chips" class="chips-proc"></div>
+        <button class="btn" id="lc-add-outro" type="button" style="margin-top:10px;padding:6px 12px;font-size:.78rem;background:var(--verde-tinta);color:var(--titulo)">+ adicionar outro procedimento</button>
+        <div class="acoes" style="margin-top:14px">
+          <button class="btn btn-confirmar" id="lc-salvar">Lançar cirurgia</button>
+          <button class="btn btn-recusar" id="lc-fechar">Fechar</button>
+        </div>
+        <p style="font-size:.76rem;color:var(--cinza);margin:10px 0 0">O lançamento entra na <b>Fila de confirmação</b> — nada vira produção sem o OK do médico.</p>
+      </div>
+    </section>
+
     <section class="painel hero30" aria-label="Últimos 30 dias">
       <div class="hero30-topo">
         <h2>Últimos 30 dias</h2>
@@ -637,30 +661,6 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 
     <div class="grade">
       <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
-        <section class="painel" aria-label="Lançamento manual de cirurgia">
-          <div class="painel-cab">
-            <h2>Lançar cirurgia</h2>
-            <button class="recarregar" id="lc-abrir">+ Lançar</button>
-          </div>
-          <div class="painel-corpo" id="lc-form" hidden>
-            <p style="font-size:.76rem;color:var(--cinza);margin:0 0 12px">O mesmo registro do WhatsApp, feito à mão — útil quando quem lança não usa o WhatsApp. A data decide: já aconteceu → Fila de confirmação; data futura → vira agendamento (agenda + Google).</p>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
-              <label class="campo" style="margin:0"><span>Data e hora *</span><input type="datetime-local" id="lc-data"></label>
-              <label class="campo" style="margin:0"><span>Procedimento *</span><input id="lc-proc" placeholder="digite 3+ letras" autocomplete="off"></label>
-              <label class="campo" style="margin:0"><span>Paciente</span><input id="lc-pac" placeholder="nome do paciente"></label>
-              <label class="campo" style="margin:0"><span>Hospital</span><input id="lc-hosp" placeholder="local"></label>
-              <label class="campo" style="margin:0"><span>Convênio</span><input id="lc-conv" placeholder="ex.: Unimed, Particular"></label>
-              <label class="campo" style="margin:0"><span>Valor previsto (R$)</span><input type="number" id="lc-valor" step="0.01" min="0" placeholder="preenchido ao escolher"></label>
-            </div>
-            <div id="lc-chips" class="chips-proc"></div>
-            <button class="btn" id="lc-add-outro" type="button" style="margin-top:10px;padding:6px 12px;font-size:.78rem;background:var(--verde-tinta);color:var(--titulo)">+ adicionar outro procedimento</button>
-            <div class="acoes" style="margin-top:14px">
-              <button class="btn btn-confirmar" id="lc-salvar">Lançar cirurgia</button>
-              <button class="btn btn-recusar" id="lc-fechar">Fechar</button>
-            </div>
-            <p style="font-size:.76rem;color:var(--cinza);margin:10px 0 0">O lançamento entra na <b>Fila de confirmação</b> — nada vira produção sem o OK do médico.</p>
-          </div>
-        </section>
         <section class="painel" aria-label="Fila de solicitações" style="flex:1">
           <div class="painel-cab">
             <h2>Fila de confirmação</h2>
