@@ -171,6 +171,19 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .hero30-topo{display:flex;align-items:baseline;gap:10px;padding:16px 20px 6px}
 .hero30-topo h2{font-family:var(--display);font-size:1rem;font-weight:700;color:#fff}
 .hero30-topo .conta{color:rgba(255,255,255,.55)}
+/* colapsável: começa fechado (linha compacta); expandir salva no aparelho */
+.hero30-topo{cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.hero30.fechado .hero30-topo{padding:14px 20px}
+.hero30.fechado .grafico30,.hero30.fechado .pago-aberto{display:none}
+.hero30.fechado .conta{display:none}
+.h30-mini{display:none;margin-left:auto;gap:14px;align-items:baseline;font-variant-numeric:tabular-nums}
+.hero30.fechado .h30-mini{display:flex}
+.h30-mini .mini-pago{color:#3FBF8F;font-weight:700}
+.h30-mini .mini-aberto{color:#E4604E;font-weight:700}
+.h30-seta{margin-left:10px;color:rgba(255,255,255,.55);display:flex;align-items:center;align-self:center}
+.h30-seta svg{transition:transform .2s ease}
+.hero30:not(.fechado) .h30-seta svg{transform:rotate(180deg)}
+.hero30:not(.fechado) .h30-seta{margin-left:auto}
 .grafico30{padding:4px 8px 0}
 .grafico30 svg{display:block;width:100%;height:132px}
 .pago-aberto{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(255,255,255,.12)}
@@ -652,10 +665,12 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
       </div>
     </section>
 
-    <section class="painel hero30" aria-label="Últimos 30 dias">
-      <div class="hero30-topo">
+    <section class="painel hero30 fechado" id="hero30" aria-label="Últimos 30 dias">
+      <div class="hero30-topo" id="h30-topo" role="button" tabindex="0" aria-expanded="false" title="Mostrar/esconder o gráfico">
         <h2>Últimos 30 dias</h2>
         <span class="conta" id="h30-conta"></span>
+        <span class="h30-mini"><span class="mini-pago" id="h30c-pago">–</span><span class="mini-aberto" id="h30c-aberto">–</span></span>
+        <span class="h30-seta" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       </div>
       <div id="grafico30" class="grafico30"></div>
       <div class="pago-aberto">
@@ -2616,6 +2631,8 @@ async function carregarGrafico30(){
     const aberto = Math.max(0, totalPrevisto - pago);
     $("h30-pago").textContent = brl.format(pago);
     $("h30-aberto").textContent = brl.format(aberto);
+    $("h30c-pago").textContent = brl.format(pago);
+    $("h30c-aberto").textContent = brl.format(aberto);
     $("h30-conta").textContent = (cir.data || []).length ? (cir.data.length + " cirurgia(s)") : "";
 
     // gráfico de linha SVG, no espírito do app original
@@ -2642,6 +2659,20 @@ async function carregarGrafico30(){
     alvo.innerHTML = "";
   }
 }
+
+/* herói colapsável: toque na linha mostra/esconde o gráfico (memória por aparelho) */
+(function(){
+  const sec = $("hero30"), topo = $("h30-topo");
+  if (!sec || !topo) return;
+  try { if (localStorage.getItem("h30_aberto") === "1") { sec.classList.remove("fechado"); topo.setAttribute("aria-expanded","true"); } } catch(e){}
+  const alternar = () => {
+    const fechado = sec.classList.toggle("fechado");
+    topo.setAttribute("aria-expanded", fechado ? "false" : "true");
+    try { localStorage.setItem("h30_aberto", fechado ? "0" : "1"); } catch(e){}
+  };
+  topo.addEventListener("click", alternar);
+  topo.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternar(); } });
+})();
 
 /* ---------- radar financeiro (ROI do médico) ---------- */
 async function carregarRadar(){
