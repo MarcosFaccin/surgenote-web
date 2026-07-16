@@ -935,6 +935,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
       Entrar com digital / Face ID
     </button>
     <button class="bio-sair" id="bio-senha">Sair e entrar com senha</button>
+    <p id="bio-diag" style="font-size:.7rem;opacity:.55;margin-top:14px;word-break:break-word" hidden></p>
   </div>
 </div>
 
@@ -3212,9 +3213,24 @@ async function bioRegistrar(){
     toast("Biometria ativada neste aparelho.");
     return true;
   } catch (e) {
-    toast("Biometria não configurada: " + (e.message || e), true);
+    toast("Biometria não configurada: " + bioDescreverErro(e), true);
     return false;
   }
+}
+
+/* Descreve o erro do WebAuthn em termos acionáveis (diagnóstico iPhone/Android). */
+function bioDescreverErro(e){
+  const nome = (e && e.name) || "";
+  const base = nome + (e && e.message ? " — " + e.message : "");
+  if (nome === "NotAllowedError") return base + " (cancelado, sem permissão ou iCloud/Chaves desativado no iPhone)";
+  if (nome === "NotSupportedError" || nome === "SecurityError") return base + " (navegador/modo sem suporte a biometria)";
+  return base || String(e);
+}
+
+/* Contexto do aparelho p/ diagnóstico: modo PWA×navegador e se há credencial salva. */
+function bioContexto(){
+  const pwa = window.matchMedia && matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  return (pwa ? "app instalado (PWA)" : "navegador") + " · credencial salva: " + (localStorage.getItem("bio_cred") ? "sim" : "não");
 }
 
 async function bioDesbloquear(silencioso){
@@ -3228,10 +3244,16 @@ async function bioDesbloquear(silencioso){
       timeout: 60000
     }});
     $("bio-trava").hidden = true;
+    $("bio-diag").hidden = true;
   } catch (e) {
     // No iPhone a chamada automática falha sem gesto do usuário — fica quieto
     // e espera o toque no botão; só avisa quando a tentativa foi manual.
-    if (!silencioso) toast("Não foi possível desbloquear. Tente de novo ou use a senha.", true);
+    if (!silencioso) {
+      toast("Não foi possível desbloquear. Tente de novo ou use a senha.", true);
+      const d = $("bio-diag");
+      d.textContent = "Diagnóstico: " + bioDescreverErro(e) + " · " + bioContexto();
+      d.hidden = false;
+    }
   }
 }
 
