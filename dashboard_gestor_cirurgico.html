@@ -264,8 +264,6 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .kpi.alerta .valor{color:var(--vermelho)}
 
 /* grade principal */
-.grade{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:16px}
-@media (max-width: 980px){.grade{grid-template-columns:1fr}}
 .painel{background:var(--branco);border:1px solid var(--linha);border-radius:var(--raio)}
 .painel-cab{padding:12px 16px;border-bottom:1px solid var(--linha);display:flex;align-items:baseline;gap:10px}
 .painel-cab h2{font-family:var(--display);font-size:1.05rem;font-weight:700;color:var(--titulo)}
@@ -478,8 +476,6 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
   .acoes .btn{flex:1;justify-content:center}
   /* painel de aparência ocupa a largura */
   #aparencia-painel{max-width:none}
-  /* herói e grade sem colunas */
-  .grade{grid-template-columns:1fr;gap:12px}
 }
 @media (max-width: 640px){
   main{padding:12px 12px 96px}
@@ -637,33 +633,14 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
       <div class="kpi alerta"><div class="rotulo">Glosas em aberto</div><div class="valor" id="kpi-glosas">–</div><div class="sub" id="kpi-glosas-sub">a recorrer</div></div>
     </section>
 
-    <div class="grade">
-      <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
-        <section class="painel" aria-label="Fila de solicitações" style="flex:1">
-          <div class="painel-cab">
-            <h2>Fila de confirmação</h2>
-            <span class="conta" id="fila-conta"></span>
-            <button class="recarregar" id="btn-recarregar">Atualizar</button>
-          </div>
-          <div class="painel-corpo" id="fila"></div>
-        </section>
+    <section class="painel" aria-label="Fila de solicitações">
+      <div class="painel-cab">
+        <h2>Fila de confirmação</h2>
+        <span class="conta" id="fila-conta"></span>
+        <button class="recarregar" id="btn-recarregar">Atualizar</button>
       </div>
-
-      <aside style="display:flex;flex-direction:column;gap:16px">
-        <section class="painel" aria-label="Pipeline por status">
-          <div class="painel-cab"><h2>Pipeline do mês</h2></div>
-          <div class="painel-corpo" id="pipeline"></div>
-        </section>
-        <section class="painel" aria-label="Movimentações recentes">
-          <div class="painel-cab"><h2>Recentes</h2></div>
-          <div class="painel-corpo" id="recentes"></div>
-        </section>
-        <section class="painel" aria-label="Conciliação pendente" style="flex:1">
-          <div class="painel-cab"><h2>Conciliação pendente</h2><span class="conta" id="concil-conta"></span></div>
-          <div class="painel-corpo" id="conciliacao"></div>
-        </section>
-      </aside>
-    </div>
+      <div class="painel-corpo" id="fila"></div>
+    </section>
     </div>
 
     <div class="view" data-view="agenda">
@@ -705,6 +682,11 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
           <div class="painel-corpo" id="cal-corpo"></div>
         </section>
 
+        <section class="painel" aria-label="Movimentações recentes" style="margin-bottom:16px">
+          <div class="painel-cab"><h2>Recentes</h2></div>
+          <div class="painel-corpo" id="recentes"></div>
+        </section>
+
         <section class="painel" aria-label="Sincronização com o Google Agenda">
           <div class="painel-cab">
             <h2>Sincronização com o Google</h2>
@@ -741,6 +723,16 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
       </div>
       <div class="painel-corpo" id="comparador"></div>
     </section>
+
+        <section class="painel" aria-label="Pipeline por status" style="margin-top:16px">
+          <div class="painel-cab"><h2>Pipeline do mês</h2></div>
+          <div class="painel-corpo" id="pipeline"></div>
+        </section>
+
+        <section class="painel" aria-label="Conciliação pendente" style="margin-top:16px">
+          <div class="painel-cab"><h2>Conciliação pendente</h2><span class="conta" id="concil-conta"></span></div>
+          <div class="painel-corpo" id="conciliacao"></div>
+        </section>
 
         <section class="painel" aria-label="Relatório para hospital ou convênio" style="margin-top:16px">
           <div class="painel-cab"><h2>Relatório hospital/convênio</h2></div>
