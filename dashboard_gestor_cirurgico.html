@@ -1127,6 +1127,7 @@ function ligarAparencia(){
     } else {
       localStorage.removeItem("bio_lock");
       localStorage.removeItem("bio_cred");
+      localStorage.removeItem("bio_ultimo");
       toast("Biometria desativada neste aparelho.");
     }
   });
@@ -1139,7 +1140,7 @@ function ligarAparencia(){
     localStorage.setItem("bio_oferta_nao", "1"); // não insiste mais neste aparelho
     $("bio-oferta").hidden = true;
   });
-  $("bio-senha").addEventListener("click", async () => { localStorage.removeItem("bio_lock"); await sb.auth.signOut(); location.reload(); });
+  $("bio-senha").addEventListener("click", async () => { localStorage.removeItem("bio_lock"); localStorage.removeItem("bio_ultimo"); await sb.auth.signOut(); location.reload(); });
   let nomeTimer = null;
   $("ap-nome").addEventListener("input", () => {
     prefAparencia.nome_exibicao = $("ap-nome").value;
@@ -3317,7 +3318,15 @@ async function carregarMinhaAssinatura(){
 }
 
 /* ---------- biometria (trava local do aparelho, WebAuthn) ---------- */
+const BIO_TOLERANCIA_MS = 3 * 60 * 1000; // estilo banco: 3 min sem pedir de novo
 function bioAtivada(){ try { return localStorage.getItem("bio_lock") === "1"; } catch (e) { return false; } }
+function bioMarcarUso(){ try { localStorage.setItem("bio_ultimo", String(Date.now())); } catch (e) {} }
+function bioDentroDaTolerancia(){
+  try {
+    const t = Number(localStorage.getItem("bio_ultimo") || 0);
+    return t > 0 && (Date.now() - t) < BIO_TOLERANCIA_MS;
+  } catch (e) { return false; }
+}
 
 async function bioRegistrar(){
   if (!window.PublicKeyCredential) { toast("Este navegador não suporta biometria.", true); return false; }
@@ -3365,6 +3374,7 @@ async function bioDesbloquear(silencioso){
       userVerification: "required",
       timeout: 60000
     }});
+    bioMarcarUso();
     $("bio-trava").hidden = true;
     $("bio-diag").hidden = true;
   } catch (e) {
@@ -3381,12 +3391,25 @@ async function bioDesbloquear(silencioso){
 
 function bioTravarSePreciso(){
   if (bioAtivada() && location.protocol === "https:") {
+    if (bioDentroDaTolerancia()) { bioMarcarUso(); return; } // voltou em < 3 min: não pede de novo
     const nome = ($("titulo-app").textContent || "").trim();
     if (nome && nome !== "Gestão Cirúrgica") $("bio-ola").textContent = "Olá, " + nome + ". Confirme sua identidade para entrar.";
     $("bio-trava").hidden = false;
     bioDesbloquear(true);
   }
 }
+
+/* Estilo app de banco: ao sair do app marca o horário; ao voltar, se passou
+   da tolerância (3 min), trava de novo — sem recarregar a página. */
+document.addEventListener("visibilitychange", () => {
+  if (!bioAtivada()) return;
+  if (document.visibilityState === "hidden") {
+    // só renova a marca se o app estava desbloqueado (trava escondida)
+    if ($("bio-trava").hidden) bioMarcarUso();
+  } else if (document.visibilityState === "visible") {
+    if ($("bio-trava").hidden && !bioDentroDaTolerancia() && !$("view-app").hidden) bioTravarSePreciso();
+  }
+});
 
 /* ---------- ações ---------- */
 async function mudarStatus(cirurgia, novo, msgOk){
