@@ -627,7 +627,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
     <section class="painel" aria-label="Lançamento manual de cirurgia" style="text-align:center;margin-bottom:16px">
       <div class="lc-linha-cta">
         <button class="lc-cta" id="lc-abrir">+ Lançar cirurgia</button>
-        <button class="lc-ditar" id="lc-ditar" title="Ditar a cirurgia por áudio">🎤 Ditar</button>
+        <button class="lc-ditar" id="lc-ditar" title="Lançar a cirurgia falando">🎤 Lançar por voz</button>
       </div>
       <div class="painel-corpo" id="lc-form" style="text-align:left" hidden>
         <p class="lc-transc" id="lc-transc" hidden></p>
@@ -3158,11 +3158,11 @@ async function ditToggle(){
     btn.classList.remove("gravando");
     const blob = new Blob(pedacos, { type: ditRec.mimeType || tipo || "audio/webm" });
     ditRec = null;
-    if (blob.size < 1000) { btn.textContent = "🎤 Ditar"; toast("Áudio muito curto — tente de novo.", true); return; }
+    if (blob.size < 1000) { btn.textContent = "🎤 Lançar por voz"; toast("Áudio muito curto — tente de novo.", true); return; }
     btn.disabled = true; btn.textContent = "Transcrevendo…";
     try { await ditEnviar(blob); }
     catch (e) { toast("Ditado falhou: " + (e.message || e), true); }
-    btn.disabled = false; btn.textContent = "🎤 Ditar";
+    btn.disabled = false; btn.textContent = "🎤 Lançar por voz";
   };
   ditRec.start();
   ditIni = Date.now();
@@ -3194,7 +3194,7 @@ async function ditEnviar(blob){
 async function ditPreencher(transcricao, c){
   $("lc-form").hidden = false;
   const tr = $("lc-transc");
-  tr.textContent = "🎤 Você ditou: “" + transcricao + "” — confira os campos antes de lançar.";
+  tr.textContent = "🎤 Você falou: “" + transcricao + "” — confira os campos antes de lançar.";
   tr.hidden = false;
   if (c.data_hora) $("lc-data").value = String(c.data_hora).slice(0, 16);
   if (c.paciente) $("lc-pac").value = c.paciente;
