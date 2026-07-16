@@ -76,12 +76,12 @@ button{font-family:inherit;cursor:pointer}
 .btn-primario{background:var(--verde);color:#fff;width:100%;justify-content:center}
 .lc-cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;border:none;border-radius:12px;background:#E89B1C;color:#0A1E28;font-weight:700;font-size:1.05rem;padding:16px 34px;max-width:420px;width:100%;box-shadow:0 6px 18px rgba(232,155,28,.35);transition:filter .15s}
 .lc-cta:hover{filter:brightness(1.08)}
-.lc-ditar{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid #E89B1C;border-radius:12px;background:transparent;color:#E89B1C;font-weight:700;font-size:1rem;padding:12px 15px;transition:filter .15s}
-.lc-ditar:hover{filter:brightness(1.08)}
-.lc-ditar svg{width:24px;height:24px;flex-shrink:0}
-/* botão de voz estilo WhatsApp em TODAS as telas: só o microfone em repouso,
-   o texto volta enquanto grava/transcreve (pedido Marcos 16/07) */
-.lc-ditar:not(.gravando):not(.ocupado) .lc-dit-txt{display:none}
+/* botão Consultar tabelas ao lado do + Lançar (pedido Dr. Augusto 16/07;
+   substituiu o "Lançar por voz", removido a pedido dele) */
+.lc-consulta{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid #E89B1C;border-radius:12px;background:transparent;color:#E89B1C;font-weight:700;font-size:1rem;padding:12px 16px;transition:filter .15s;font-family:inherit;cursor:pointer}
+.lc-consulta:hover{filter:brightness(1.08)}
+.lc-consulta svg{width:22px;height:22px;flex-shrink:0}
+@media (max-width:640px){.lc-consulta span{display:none}}
 .lc-ditar.gravando{background:var(--vermelho);border-color:var(--vermelho);color:#fff;animation:lcPulsa 1.2s infinite}
 @keyframes lcPulsa{50%{filter:brightness(1.25)}}
 .lc-linha-cta{display:flex;gap:10px;justify-content:center;align-items:stretch;flex-wrap:wrap}
@@ -666,9 +666,9 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
     <section class="painel" aria-label="Lançamento manual de cirurgia" style="text-align:center;margin-bottom:16px">
       <div class="lc-linha-cta">
         <button class="lc-cta" id="lc-abrir">+ Lançar cirurgia</button>
-        <button class="lc-ditar" id="lc-ditar" title="Lançar a cirurgia falando" aria-label="Lançar por voz">
-          <svg class="lc-dit-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a1 1 0 0 0-2 0 5 5 0 0 1-10 0 1 1 0 0 0-2 0 7 7 0 0 0 6 6.92V20H8.5a1 1 0 0 0 0 2h7a1 1 0 0 0 0-2H13v-2.08A7 7 0 0 0 19 11z"/></svg>
-          <span class="lc-dit-txt">Lançar por voz</span>
+        <button class="lc-consulta so-titular" id="lc-consulta" title="Consultar as tabelas CBHPM/SUS">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span>Consultar tabelas</span>
         </button>
       </div>
       <div class="painel-corpo" id="lc-form" style="text-align:left" hidden>
@@ -1543,7 +1543,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("ag-cancelar").addEventListener("click", () => { $("ag-form").hidden = true; });
   $("ag-salvar").addEventListener("click", agCriar);
   $("lc-abrir").addEventListener("click", () => { $("lc-form").hidden = !$("lc-form").hidden; });
-  $("lc-ditar").addEventListener("click", ditToggle);
+  $("lc-consulta").addEventListener("click", () => { trocarView("ajustes"); trocarAjuste("consulta"); });
   $("lc-fechar").addEventListener("click", () => { $("lc-form").hidden = true; });
   $("lc-salvar").addEventListener("click", lcCriar);
   $("lc-proc").addEventListener("input", () => {
