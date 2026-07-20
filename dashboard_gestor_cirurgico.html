@@ -891,10 +891,18 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
           Busque por nome ou código e veja o valor de referência — útil para preencher guias manuais.
           (Consulta apenas: para definir o seu valor, use "Minha tabela de valores" abaixo.)
         </p>
-        <label class="campo" style="max-width:520px">
-          <span>Buscar procedimento (nome ou código)</span>
-          <input id="ct-busca" placeholder="ex.: colecistectomia ou 3.10.05.47-0" autocomplete="off">
-        </label>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <label class="campo" style="max-width:520px;flex:1 1 260px">
+            <span>Buscar procedimento (nome ou código)</span>
+            <input id="ct-busca" placeholder="ex.: colecistectomia ou 3.10.05.47-0" autocomplete="off">
+          </label>
+          <label class="campo" style="max-width:220px">
+            <span>Edição da tabela</span>
+            <select id="ct-edicao" class="sel-status" style="width:100%;padding:11px 9px">
+              <option value="2022">CBHPM 2022 (atual) + SUS</option>
+            </select>
+          </label>
+        </div>
         <div id="ct-resultados" style="overflow-x:auto"></div>
       </div>
     </section>
@@ -1280,6 +1288,7 @@ function trocarAjuste(nome){
   document.querySelectorAll(".aj-sub").forEach(s => s.hidden = (s.dataset.aj !== nome));
   try { history.replaceState(null, "", "#ajustes" + (nome ? "/" + nome : "")); } catch (e) {}
   window.scrollTo({ top: 0 });
+  if (nome === "consulta") ctPopularEdicoes();
 }
 function toast(msg, ruim){
   const t = document.createElement("div");
@@ -3635,15 +3644,33 @@ async function mcBuscar(){
 
 /* ---------- consulta às tabelas CBHPM/SUS (só leitura, p/ guias manuais) ---------- */
 let ctTimer = null;
+let ctEdicoesCarregadas = false;
 document.getElementById("ct-busca")?.addEventListener("input", () => {
   clearTimeout(ctTimer);
   ctTimer = setTimeout(consultarTabelas, 350);
 });
+document.getElementById("ct-edicao")?.addEventListener("change", consultarTabelas);
+async function ctPopularEdicoes(){
+  if (ctEdicoesCarregadas) return;
+  ctEdicoesCarregadas = true;
+  const sel = document.getElementById("ct-edicao");
+  if (!sel) return;
+  const { data, error } = await sb.from("cbhpm_edicoes").select("id,rotulo,ordem").neq("id", "2022").order("ordem");
+  if (error || !data) return;
+  data.forEach(e => {
+    const opt = document.createElement("option");
+    opt.value = e.id;
+    opt.textContent = e.rotulo;
+    sel.appendChild(opt);
+  });
+}
 async function consultarTabelas(){
   const termo = (document.getElementById("ct-busca").value || "").trim();
   const alvo = document.getElementById("ct-resultados");
   const conta = document.getElementById("ct-conta");
   if (termo.length < 3) { alvo.innerHTML = ""; conta.textContent = ""; return; }
+  const edicao = document.getElementById("ct-edicao")?.value || "2022";
+  if (edicao !== "2022") { return consultarEdicaoAntiga(edicao, termo, alvo, conta); }
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
   const t = termo.replace(/[%,]/g, "");
   const { data, error } = await sb.from("procedimentos")
@@ -3670,6 +3697,33 @@ async function consultarTabelas(){
   });
   alvo.innerHTML = html + '</table>' +
     '<p style="font-size:.75rem;color:var(--cinza);margin-top:8px">Valores de referência (CBHPM/SUS) — não substituem a tabela contratual de cada convênio.</p>';
+}
+async function consultarEdicaoAntiga(edicao, termo, alvo, conta){
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+  const t = termo.replace(/[%,()]/g, "");
+  const dig = t.replace(/\D/g, "");
+  const partes = ["nome.ilike.%" + t + "%", "codigo_fmt.ilike.%" + t + "%"];
+  if (dig.length >= 3 && /^[\d.\-\s]+$/.test(t)) partes.push("codigo_fmt.ilike." + formatarCodigoCbhpm(dig) + "%");
+  let q = sb.from("cbhpm_edicoes_itens")
+    .select("codigo_fmt, nome, porte, uco, n_auxiliares, porte_anestesico")
+    .eq("edicao", edicao).order("nome").limit(30);
+  q = (dig.length >= 6 && /^[\d.\-\s]+$/.test(t)) ? q.eq("codigo", Number(dig)) : q.or(partes.join(","));
+  const { data, error } = await q;
+  if (error) { alvo.innerHTML = '<p style="color:var(--vermelho);font-size:.85rem">Erro: ' + esc(error.message) + '</p>'; return; }
+  if (!data || !data.length) { alvo.innerHTML = '<p style="color:var(--cinza);font-size:.85rem">Nada encontrado para "' + esc(termo) + '".</p>'; conta.textContent = "0"; return; }
+  conta.textContent = data.length + (data.length === 30 ? "+" : "");
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:.84rem;min-width:640px">' +
+    '<tr style="color:var(--cinza);text-align:left"><th style="padding:6px 8px">Código</th><th style="padding:6px 8px">Procedimento</th><th style="padding:6px 8px">Porte</th><th style="padding:6px 8px">UCO</th><th style="padding:6px 8px">Aux.</th></tr>';
+  data.forEach(p => {
+    html += '<tr style="border-top:1px solid var(--linha)">' +
+      '<td style="padding:6px 8px;white-space:nowrap;font-variant-numeric:tabular-nums">' + esc(p.codigo_fmt) + '</td>' +
+      '<td style="padding:6px 8px">' + esc(p.nome) + '</td>' +
+      '<td style="padding:6px 8px">' + esc(p.porte || "—") + (p.porte_anestesico ? ' <span style="color:var(--cinza)">(anest. ' + esc(p.porte_anestesico) + ')</span>' : '') + '</td>' +
+      '<td style="padding:6px 8px">' + (p.uco != null ? esc(p.uco) : "—") + '</td>' +
+      '<td style="padding:6px 8px">' + (p.n_auxiliares ?? "—") + '</td></tr>';
+  });
+  alvo.innerHTML = html + '</table>' +
+    '<p style="font-size:.75rem;color:var(--cinza);margin-top:8px">Edições antigas mostram porte e UCO — o valor em R$ depende do valor de porte de cada convênio (configure em Meus contratos). Tabelas CBHPM © AMB.</p>';
 }
 
 /* ---------- ditado por áudio (preenche o formulário; nada grava sem o Lançar) ---------- */
