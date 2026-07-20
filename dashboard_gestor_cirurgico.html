@@ -1074,7 +1074,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
           </label>
           <button class="btn btn-confirmar" id="dt-recalcular" style="padding:8px 14px;font-size:.82rem">Recalcular valor</button>
         </div>
-        <div id="dt-memoria" style="font-size:.8rem;color:var(--cinza);margin-top:8px"></div>
+        <div id="dt-memoria" style="font-size:.8rem;color:var(--cinza);margin-top:8px;white-space:pre-line"></div>
       </div>
 
       <div class="dt-pagamento">
@@ -3293,10 +3293,13 @@ async function dtRecalcular(){
   if (m.origem_regra === "hospital") txt += " · regra do hospital";
   else if (m.origem_regra === "convenio") txt += " · regra geral do convênio";
   else if (m.origem_regra === "padrao") txt += " · padrão de mercado (sem contrato)";
+  if (m.edicao) txt += " · tabela " + m.edicao;
   if (Number(m.ajuste_pct)) txt += " · ajuste do contrato " + (m.ajuste_pct > 0 ? "+" : "") + m.ajuste_pct + "%";
   if (m.urgencia) txt += " · urgência +" + m.pct_urgencia + "%";
   if (m.papel !== "cirurgiao") txt += " · " + m.papel + " " + m.pct_papel + "%";
   txt += " · *Total: " + brl.format(Number(m.total || 0)) + "*";
+  const avisos = (m.itens || []).filter(it => it.aviso).map(it => it.aviso);
+  if (avisos.length) txt += "\n" + avisos.join("\n");
   $("dt-memoria").textContent = txt.replace(/\*/g, "");
   toast("Valor recalculado: " + brl.format(Number(m.total || 0)));
   const { data: c } = await sb.from("vw_cirurgias_completa").select("*").eq("id", dtCirurgia.id).maybeSingle();
@@ -3341,14 +3344,90 @@ function contratoCampos(r){
     campoNum("Instrum. %", "pct_instrumentador", r.pct_instrumentador) +
     '</div>';
 }
-const CONTRATO_PADRAO = { ajuste_pct: 0, pct_proc2: 70, pct_proc3: 50, pct_via_diferente: 100, pct_urgencia: 30, pct_aux1: 30, pct_aux2: 20, pct_instrumentador: 10 };
+const CONTRATO_PADRAO = { ajuste_pct: 0, pct_proc2: 70, pct_proc3: 50, pct_via_diferente: 100, pct_urgencia: 30, pct_aux1: 30, pct_aux2: 20, pct_instrumentador: 10, edicao: null, valores_porte: null };
+
+/* tabela (edição) da CBHPM do contrato + valores de porte próprios da edição */
+function contratoEdicaoBloco(){
+  return '<div class="contrato-edicao" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--linha)">' +
+    '<label class="ct-campo" style="max-width:320px"><span>Tabela do convênio</span>' +
+    '<select class="sel-status ct-edicao-sel" style="padding:7px;font-size:.82rem"><option value="">CBHPM 2022 + deságio % (padrão)</option></select></label>' +
+    '<div class="ct-portes"></div>' +
+    '</div>';
+}
+let ctrEdicoesLista = null;
+async function ctrCarregarEdicoesLista(){
+  if (ctrEdicoesLista) return ctrEdicoesLista;
+  const { data } = await sb.from("cbhpm_edicoes").select("id,rotulo,ordem").neq("id", "2022").order("ordem");
+  ctrEdicoesLista = data || [];
+  return ctrEdicoesLista;
+}
+const ctrPortesCache = {};
+function comparaPorte(a, b){
+  const na = parseInt(a, 10), nb = parseInt(b, 10);
+  if (!isNaN(na) && !isNaN(nb) && na !== nb) return na - nb;
+  return String(a).localeCompare(String(b));
+}
+async function ctrCarregarPortes(edicao){
+  if (ctrPortesCache[edicao]) return ctrPortesCache[edicao];
+  const { data, error } = await sb.from("cbhpm_edicoes_itens").select("porte").eq("edicao", edicao).not("porte", "is", null);
+  if (error || !data) { ctrPortesCache[edicao] = []; return []; }
+  const lista = Array.from(new Set(data.map(d => d.porte))).sort(comparaPorte);
+  ctrPortesCache[edicao] = lista;
+  return lista;
+}
+/* popula o select de edições e o editor de valores de porte de um card de contrato */
+async function ctMontarEdicaoUI(container, r){
+  const sel = container.querySelector(".ct-edicao-sel");
+  const portesDiv = container.querySelector(".ct-portes");
+  if (!sel || !portesDiv) return;
+  const edicoes = await ctrCarregarEdicoesLista();
+  edicoes.forEach(e => {
+    const opt = document.createElement("option");
+    opt.value = e.id; opt.textContent = e.rotulo;
+    sel.appendChild(opt);
+  });
+  sel.value = r.edicao || "";
+  const valoresIniciais = r.valores_porte || {};
+  const render = async () => {
+    if (!sel.value) { portesDiv.innerHTML = ""; return; }
+    const portes = await ctrCarregarPortes(sel.value);
+    const valores = sel.value === (r.edicao || "") ? valoresIniciais : {};
+    if (!portes.length) {
+      portesDiv.innerHTML = '<p style="font-size:.75rem;color:var(--cinza);margin-top:8px">Nenhum porte encontrado nessa edição.</p>';
+      return;
+    }
+    portesDiv.innerHTML = '<p style="font-size:.7rem;color:var(--cinza);margin:8px 0 4px">Valor (R$) de cada porte nessa tabela — preencha só os que usa:</p>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px">' +
+      portes.map(p => '<label class="ct-campo"><span>' + escHtml(p) + '</span>' +
+        '<input type="number" step="0.01" min="0" data-porte="' + escHtml(p) + '" value="' +
+        (valores[p] != null ? Number(valores[p]) : "") + '" placeholder="—"></label>').join("") +
+      '</div>';
+  };
+  sel.addEventListener("change", render);
+  await render();
+}
 async function ctSalvarRegra(div, convenioId, hospitalId, rotulo){
   const pega = campo => Number(div.querySelector('[data-campo="' + campo + '"]').value || 0);
+  const edicaoSel = div.querySelector(".ct-edicao-sel");
+  const edicao = edicaoSel && edicaoSel.value ? edicaoSel.value : null;
+  let valoresPorte = null;
+  if (edicao) {
+    valoresPorte = {};
+    div.querySelectorAll(".ct-portes [data-porte]").forEach(inp => {
+      const v = inp.value.trim();
+      if (v !== "") valoresPorte[inp.dataset.porte] = Number(v);
+    });
+    if (!Object.keys(valoresPorte).length) {
+      toast("Escolha ao menos um valor de porte para essa tabela — ou volte para \"CBHPM 2022 + deságio % (padrão)\".", true);
+      return;
+    }
+  }
   const { error } = await sb.rpc("salvar_contrato", {
     p_convenio: convenioId, p_hospital: hospitalId,
     p_ajuste: pega("ajuste_pct"), p_proc2: pega("pct_proc2"), p_proc3: pega("pct_proc3"),
     p_via: pega("pct_via_diferente"), p_urgencia: pega("pct_urgencia"),
-    p_aux1: pega("pct_aux1"), p_aux2: pega("pct_aux2"), p_instr: pega("pct_instrumentador")
+    p_aux1: pega("pct_aux1"), p_aux2: pega("pct_aux2"), p_instr: pega("pct_instrumentador"),
+    p_edicao: edicao, p_valores_porte: valoresPorte
   });
   if (error) { toast("Não foi possível salvar: " + error.message, true); return; }
   toast("Contrato " + rotulo + " salvo.");
@@ -3372,12 +3451,13 @@ async function carregarContratos(){
 
       const div = document.createElement("div");
       div.className = "contrato";
-      div.innerHTML = '<div class="contrato-nome"></div>' + contratoCampos(geral) +
+      div.innerHTML = '<div class="contrato-nome"></div>' + contratoCampos(geral) + contratoEdicaoBloco() +
         '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn btn-confirmar ct-salvar" style="padding:7px 14px;font-size:.8rem">Salvar contrato</button>' +
         (cv.tipo === "convenio" ? '<button class="btn btn-recusar ct-remover" style="padding:7px 14px;font-size:.8rem">Remover</button>' : '') +
         '</div><div class="ct-hosps"></div>';
       div.querySelector(".contrato-nome").textContent = cv.nome + (porHosp.length ? " · regra geral" : "");
       div.querySelector(".ct-salvar").addEventListener("click", () => ctSalvarRegra(div, cv.id, null, cv.nome));
+      ctMontarEdicaoUI(div, geral);
       div.querySelector(".ct-remover")?.addEventListener("click", async () => {
         if (!window.confirm('Remover o convênio "' + cv.nome + '"? Só é possível se ele não tiver cirurgias registradas.')) return;
         const { data, error } = await sb.rpc("remover_convenio", { p_id: cv.id });
@@ -3391,12 +3471,13 @@ async function carregarContratos(){
         const sub = document.createElement("div");
         sub.style.cssText = "margin-top:12px;padding:10px 12px;border:1px dashed var(--linha);border-radius:9px";
         sub.innerHTML = '<div style="font-size:.82rem;font-weight:600;margin-bottom:6px"><span class="h-nome"></span></div>' +
-          contratoCampos(r) +
+          contratoCampos(r) + contratoEdicaoBloco() +
           '<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-confirmar h-salvar" style="padding:6px 12px;font-size:.78rem">Salvar</button>' +
           '<button class="btn btn-recusar h-remover" style="padding:6px 12px;font-size:.78rem">Remover regra</button></div>';
         sub.querySelector(".h-nome").textContent = "No hospital: " + (hospNome[r.hospital_id] || "(hospital removido)");
         sub.querySelector(".h-salvar").addEventListener("click", () =>
           ctSalvarRegra(sub, cv.id, r.hospital_id, cv.nome + " · " + (hospNome[r.hospital_id] || "")));
+        ctMontarEdicaoUI(sub, r);
         sub.querySelector(".h-remover").addEventListener("click", async () => {
           if (!window.confirm("Remover a regra específica deste hospital? A regra geral do convênio volta a valer.")) return;
           const { error } = await sb.from("medico_convenio_regras").delete().eq("id", r.id);
