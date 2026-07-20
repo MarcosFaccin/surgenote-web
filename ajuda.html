@@ -224,6 +224,10 @@ footer a{color:var(--marca)}
       <div class="c"><p>Em <b>Ajustes ⚙️ → Consulta CBHPM/SUS</b>: busque por nome ou código (com ou sem os pontos) e veja porte, porte anestésico, nº de auxiliares e o valor de referência — útil para preencher guias.</p></div>
     </details>
     <details>
+      <summary>Como consultar uma edição antiga da CBHPM (2004, 2008, 2012...)?</summary>
+      <div class="c"><p>Na mesma tela, <b>Ajustes ⚙️ → Consulta CBHPM/SUS</b>, use o <b>seletor de edição</b> para trocar entre CBHPM 2004, 2005, 2008, 2010, 2012, 2014, 2018, 2022 e SUS. Nas edições antigas (2004 a 2018) a busca mostra código, porte e nº de auxiliares, mas <b>sem valor em reais</b> — o valor depende de quanto cada convênio paga por aquela edição, e isso se configura em <b>Meus contratos</b> (veja abaixo). Só a CBHPM 2022 e o SUS têm valor de referência direto na consulta.</p></div>
+    </details>
+    <details>
       <summary>Como cadastrar o MEU valor para um procedimento?</summary>
       <div class="c"><p>Em <b>Ajustes ⚙️ → Tabela de valores</b>: busque o procedimento e salve o seu valor. Ele passa a valer nos registros e nas consultas pelo WhatsApp (não se aplica ao SUS, que é tabelado).</p></div>
     </details>
@@ -236,8 +240,12 @@ footer a{color:var(--marca)}
       <div class="c"><p>Em <b>Ajustes ⚙️ → Meus contratos</b>: para cada convênio, defina deflator/ágio (%), percentuais de 2º procedimento (padrão 70%), 3º em diante (50%), outra via (100%), urgência (+30%) e participações (1º/2º auxiliar, instrumentador). Se um hospital paga diferente, crie uma <b>regra específica do hospital</b> dentro do mesmo convênio — ela vence a regra geral naquele hospital.</p></div>
     </details>
     <details>
+      <summary>Meu convênio paga por uma edição antiga da CBHPM. Como configurar?</summary>
+      <div class="c"><p>Dentro do contrato do convênio (Ajustes ⚙️ → Meus contratos), escolha a <b>"Tabela do convênio"</b> (a edição da CBHPM que ele usa, ex.: 2008, 2012) e preencha os <b>valores de porte em reais</b> que esse convênio efetivamente paga. Feito isso, o recálculo do honorário usa esses valores de porte diretamente, sem aplicar o deflator/ágio em cima deles (o deflator continua valendo para os itens sem porte configurado). Se um procedimento não tiver porte cadastrado naquele contrato, a memória de cálculo <b>avisa</b> e usa o valor de referência da CBHPM 2022 no lugar.</p></div>
+    </details>
+    <details>
       <summary>Como montar um honorário com vários procedimentos?</summary>
-      <div class="c"><p>Abra a cirurgia e use <b>"Composição do honorário"</b>: inclua os procedimentos, marque via de acesso/urgência/participação e toque em <b>Recalcular</b> — o valor previsto é atualizado e a memória de cálculo mostra cada parcela.</p></div>
+      <div class="c"><p>Abra a cirurgia e use <b>"Composição do honorário"</b>: inclua os procedimentos, marque via de acesso/urgência/participação e toque em <b>Recalcular</b> — o valor previsto é atualizado e a memória de cálculo mostra cada parcela, citando a edição da tabela usada em cada uma.</p></div>
     </details>
   </section>
 
