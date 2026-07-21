@@ -41,7 +41,8 @@ footer{color:var(--cinza);font-size:.82rem;border-top:1px solid var(--linha);mar
 <div class="topo"><a href="/"><img src="icon-192.png" alt="">SurgeNote</a></div>
 <div class="wrap">
   <h1>Política de Privacidade</h1>
-  <p class="versao">Versão 1.0 — 3 de julho de 2026</p>
+  <p class="versao">Versão 1.1 — 21 de julho de 2026 (adiciona a seção
+  "Dados do Google") · versão anterior: 1.0, de 3 de julho de 2026</p>
 
   <h2>1. Quem somos e papéis na LGPD</h2>
   <p>O SurgeNote é operado pela <b>iddeia</b> (contato:
@@ -101,7 +102,41 @@ footer{color:var(--cinza);font-size:.82rem;border-top:1px solid var(--linha);mar
   OpenAI e Google), com salvaguardas contratuais desses fornecedores, conforme
   a LGPD (art. 33).</p>
 
-  <h2>5. Por quanto tempo guardamos</h2>
+  <h2>5. Dados do Google (Google Agenda)</h2>
+  <p>Se o médico optar por conectar a própria conta Google, o SurgeNote usa a
+  API do Google Agenda (Google Calendar) da seguinte forma:</p>
+  <ul>
+    <li><b>O que acessamos:</b> o endereço de e-mail da conta Google conectada
+    (para identificar a conexão) e a permissão de criar/gerenciar eventos na
+    agenda do próprio médico. Não lemos e-mails, contatos, arquivos nem
+    qualquer outro dado da conta Google.</li>
+    <li><b>Como usamos:</b> exclusivamente para criar e atualizar, na agenda do
+    médico, os eventos das cirurgias que ele registrou no SurgeNote (título com
+    procedimento, data/hora e local). É um recurso visível e ativado pelo
+    próprio médico, que pode desconectar a qualquer momento no painel.</li>
+    <li><b>Compartilhamento:</b> os dados obtidos do Google <b>não são
+    vendidos, transferidos nem compartilhados</b> com terceiros, anunciantes ou
+    corretores de dados. Em especial, dados do Google <b>não são enviados a
+    serviços de inteligência artificial</b> (a IA do SurgeNote processa apenas
+    o conteúdo ditado pelo médico, nunca dados vindos do Google).</li>
+    <li><b>Proteção:</b> as credenciais de acesso (tokens) ficam guardadas no
+    banco de dados no servidor, isoladas por médico, e nunca são expostas no
+    navegador. Toda a comunicação é cifrada (HTTPS).</li>
+    <li><b>Retenção e exclusão:</b> ao desconectar a conta Google no painel, ou
+    ao encerrar a conta no SurgeNote, as credenciais de acesso ao Google são
+    excluídas. O médico também pode revogar o acesso a qualquer momento em
+    <a href="https://myaccount.google.com/permissions" rel="noopener">
+    myaccount.google.com/permissions</a>.</li>
+  </ul>
+  <p><b>Uso limitado (Limited Use):</b> o uso que o SurgeNote faz de dados
+  recebidos das APIs do Google está em conformidade com a
+  <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">
+  Política de Dados do Usuário dos Serviços de API do Google</a>, incluindo os
+  requisitos de Uso Limitado (Limited Use). / The use of information received
+  from Google APIs will adhere to the Google API Services User Data Policy,
+  including the Limited Use requirements.</p>
+
+  <h2>6. Por quanto tempo guardamos</h2>
   <ul>
     <li><b>Histórico das conversas de ditado (WhatsApp):</b> apagado
     automaticamente após <b>7 dias</b>.</li>
@@ -113,7 +148,7 @@ footer{color:var(--cinza);font-size:.82rem;border-top:1px solid var(--linha);mar
     retenção exigida por obrigações legais (fiscais/contábeis).</li>
   </ul>
 
-  <h2>6. Como protegemos</h2>
+  <h2>7. Como protegemos</h2>
   <ul>
     <li>Isolamento por médico no banco de dados (cada médico só acessa os
     próprios dados), com regras aplicadas no servidor.</li>
@@ -125,7 +160,7 @@ footer{color:var(--cinza);font-size:.82rem;border-top:1px solid var(--linha);mar
     nas notificações.</li>
   </ul>
 
-  <h2>7. Seus direitos (LGPD)</h2>
+  <h2>8. Seus direitos (LGPD)</h2>
   <p>Você pode solicitar confirmação de tratamento, acesso, correção,
   portabilidade, exclusão e informações sobre compartilhamento dos seus dados,
   além de revogar consentimentos. Pacientes que desejarem exercer direitos
@@ -135,17 +170,17 @@ footer{color:var(--cinza);font-size:.82rem;border-top:1px solid var(--linha);mar
   <a href="mailto:contato@iddeia.com.br">contato@iddeia.com.br</a>.
   Respondemos no prazo legal.</p>
 
-  <h2>8. Cookies e armazenamento local</h2>
+  <h2>9. Cookies e armazenamento local</h2>
   <p>Não usamos cookies de publicidade nem rastreadores de terceiros. O painel
   guarda no seu navegador apenas o necessário para funcionamento: sessão de
   login, preferências visuais e a trava biométrica local, quando ativada.</p>
 
-  <h2>9. Alterações</h2>
+  <h2>10. Alterações</h2>
   <p>Esta política pode ser atualizada. Mudanças relevantes serão comunicadas
   por e-mail ou WhatsApp e a versão vigente estará sempre nesta página.</p>
 
   <p><a class="voltar" href="/">← Voltar ao site</a></p>
-  <footer>SurgeNote é um produto da iddeia · Política de Privacidade — versão 1.0, de 03/07/2026.</footer>
+  <footer>SurgeNote é um produto da iddeia · Política de Privacidade — versão 1.1, de 21/07/2026.</footer>
 </div>
 </body>
 </html>
