@@ -411,6 +411,10 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .cal-num{font-size:.74rem;font-weight:600;color:var(--cinza);display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:50%}
 .cal-dia.hoje .cal-num{background:var(--verde);color:#fff}
 .cal-chip{display:block;font-size:.68rem;line-height:1.25;background:var(--verde-tinta);color:var(--titulo);border-radius:5px;padding:2px 5px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;border:none;width:100%;text-align:left;font-family:inherit}
+/* aguardando confirmação: tracejado âmbar (aparece na agenda sem virar produção) */
+.cal-chip.pend{background:transparent;border:1px dashed var(--ambar);color:var(--ambar)}
+.cal-ev.pend{background:transparent;border:1px dashed var(--ambar)}
+.cal-ev.pend .oq,.cal-ev.pend .hora{color:var(--ambar)}
 .cal-chip:hover{background:var(--verde);color:#fff}
 .cal-mais{display:block;font-size:.64rem;color:var(--cinza);margin-top:2px}
 .cal-sd{display:flex;gap:12px;padding:10px 2px;border-bottom:1px solid var(--linha)}
@@ -1280,11 +1284,19 @@ function rodaPara(el){
 document.addEventListener("pointerdown", ev => {
   const el = ev.target.closest && ev.target.closest('input[type="datetime-local"],input[type="date"],select');
   if (!el || (rdAtual && rdAtual.contains(ev.target))) return;
+  // iOS: readonly impede o picker NATIVO de abrir junto com a roleta
+  // (o preventDefault do pointerdown não segura o click que vem depois)
+  if (el.tagName !== "SELECT") el.readOnly = true;
   if (rodaPara(el)) { ev.preventDefault(); el.blur(); }
+});
+document.addEventListener("click", ev => {
+  const el = ev.target.closest && ev.target.closest('input[type="datetime-local"],input[type="date"]');
+  if (el) { ev.preventDefault(); el.blur(); }
 });
 document.addEventListener("focusin", ev => {
   const el = ev.target;
   if (!el.matches || !el.matches('input[type="datetime-local"],input[type="date"]')) return;
+  el.readOnly = true;
   if (rdAtual) { el.blur(); return; }
   if (rodaPara(el)) el.blur();
 });
@@ -2677,7 +2689,7 @@ async function carregarCalendario(){
   try {
     const { data: cirurgias, error } = await sb.from("vw_cirurgias_completa")
       .select("id,nome_procedimento,paciente_nome,hospital_ref,hospital_nome,data_cirurgia,status")
-      .in("status", ["confirmada","realizada","paga"])
+      .in("status", ["confirmada","realizada","paga","faturada","aguardando_confirmacao"])
       .gte("data_cirurgia", ini.toISOString())
       .lt("data_cirurgia", fim.toISOString())
       .order("data_cirurgia", { ascending: true });
@@ -2705,10 +2717,10 @@ async function carregarCalendario(){
         const evs = porDia[k] || [];
         evs.slice(0, 3).forEach(c => {
           const chip = document.createElement("button");
-          chip.className = "cal-chip";
+          chip.className = "cal-chip" + (c.status === "aguardando_confirmacao" ? " pend" : "");
           const hora = new Date(c.data_cirurgia).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
           chip.textContent = hora + " " + (c.nome_procedimento || "cirurgia");
-          chip.title = (c.nome_procedimento || "") + " · " + (c.paciente_nome || "paciente n/d");
+          chip.title = (c.nome_procedimento || "") + " · " + (c.paciente_nome || "paciente n/d") + (c.status === "aguardando_confirmacao" ? " · aguardando confirmação" : "");
           chip.addEventListener("click", (e) => { e.stopPropagation(); abrirDetalhe(c.id); });
           cel.appendChild(chip);
         });
@@ -2737,12 +2749,12 @@ async function carregarCalendario(){
         } else {
           evs.forEach(c => {
             const ev = document.createElement("button");
-            ev.className = "cal-ev";
+            ev.className = "cal-ev" + (c.status === "aguardando_confirmacao" ? " pend" : "");
             const hora = new Date(c.data_cirurgia).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
             ev.innerHTML = '<span class="hora"></span><span style="min-width:0"><span class="oq"></span><span class="quem" style="display:block"></span></span>';
             ev.querySelector(".hora").textContent = hora;
             ev.querySelector(".oq").textContent = c.nome_procedimento || "cirurgia";
-            ev.querySelector(".quem").textContent = (c.paciente_nome || "paciente n/d") + (c.hospital_ref || c.hospital_nome ? " · " + (c.hospital_ref || c.hospital_nome) : "");
+            ev.querySelector(".quem").textContent = (c.paciente_nome || "paciente n/d") + (c.hospital_ref || c.hospital_nome ? " · " + (c.hospital_ref || c.hospital_nome) : "") + (c.status === "aguardando_confirmacao" ? " · aguardando confirmação" : "");
             ev.addEventListener("click", () => abrirDetalhe(c.id));
             evsEl.appendChild(ev);
           });
