@@ -306,6 +306,16 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .kpi.atencao .valor{color:var(--ambar)}
 .kpi.alerta .valor{color:var(--vermelho)}
 
+/* Situação das cirurgias — botões de status por linha */
+.sit-linha{padding:10px 0;border-top:1px solid var(--linha)}
+.sit-linha:first-child{border-top:none;padding-top:0}
+.sit-nome{font-size:.88rem;font-weight:600;color:var(--titulo)}
+.sit-sub{font-size:.78rem;color:var(--cinza);margin:2px 0 8px}
+.sit-seg{display:flex;gap:6px;flex-wrap:wrap}
+.sit-seg button{border:1px solid var(--linha);background:var(--branco);color:var(--cinza);border-radius:999px;padding:5px 13px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit}
+.sit-seg button.ativo{background:var(--verde);border-color:var(--verde);color:#fff}
+.sit-seg button:disabled{opacity:.6;cursor:default}
+
 /* Consulta às tabelas — tabela de resultados (vira lista empilhada no celular) */
 .ct-tab{width:100%;border-collapse:collapse;font-size:.84rem;min-width:640px}
 .ct-tab th{padding:6px 8px;text-align:left;color:var(--cinza);font-weight:600}
@@ -703,6 +713,14 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
           <label class="campo" style="margin:0"><span>Valor previsto (R$)</span><input type="number" id="lc-valor" step="0.01" min="0" placeholder="preenchido ao escolher"></label>
         </div>
         <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.85rem;color:var(--grafite);cursor:pointer"><input type="checkbox" id="lc-urg"> ⚡ Urgência/emergência (aplica o acréscimo do contrato — padrão +30%)</label>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.85rem;color:var(--grafite)">Participação:
+          <select id="lc-papel" class="sel-status" style="padding:8px">
+            <option value="cirurgiao">Cirurgião principal</option>
+            <option value="aux1">1º auxiliar</option>
+            <option value="aux2">2º auxiliar</option>
+            <option value="aux3">3º auxiliar</option>
+          </select>
+        </label>
         <div id="lc-chips" class="chips-proc"></div>
         <button class="btn" id="lc-add-outro" type="button" style="margin-top:10px;padding:6px 12px;font-size:.78rem;background:var(--verde-tinta);color:var(--titulo)">+ adicionar outro procedimento</button>
         <div class="acoes" style="margin-top:14px">
@@ -773,6 +791,14 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
               <label class="campo" style="margin:0"><span>Valor previsto (R$)</span><input type="number" id="ag-valor" step="0.01" min="0" placeholder="preenchido ao escolher"></label>
             </div>
             <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.85rem;color:var(--grafite);cursor:pointer"><input type="checkbox" id="ag-urg"> ⚡ Urgência/emergência (aplica o acréscimo do contrato — padrão +30%)</label>
+            <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.85rem;color:var(--grafite)">Participação:
+              <select id="ag-papel" class="sel-status" style="padding:8px">
+                <option value="cirurgiao">Cirurgião principal</option>
+                <option value="aux1">1º auxiliar</option>
+                <option value="aux2">2º auxiliar</option>
+                <option value="aux3">3º auxiliar</option>
+              </select>
+            </label>
             <div id="ag-chips" class="chips-proc"></div>
             <button class="btn" id="ag-add-outro" type="button" style="margin-top:10px;padding:6px 12px;font-size:.78rem;background:var(--verde-tinta);color:var(--titulo)">+ adicionar outro procedimento</button>
             <div class="acoes" style="margin-top:14px">
@@ -828,12 +854,24 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 
     <div class="v-menu">
       <div class="aj-lista">
+        <button class="aj-item v-item" data-sub="situacao" type="button"><span class="aj-ico">✅</span><span>Situação das cirurgias</span><span class="aj-seta">›</span></button>
         <button class="aj-item v-item" data-sub="comparador" type="button"><span class="aj-ico">📊</span><span>Comparador de convênios</span><span class="aj-seta">›</span></button>
         <button class="aj-item v-item" data-sub="pipeline" type="button"><span class="aj-ico">📈</span><span>Pipeline do mês</span><span class="aj-seta">›</span></button>
         <button class="aj-item v-item" data-sub="conciliacao" type="button"><span class="aj-ico">🧾</span><span>Conciliação pendente</span><span class="aj-seta">›</span></button>
         <button class="aj-item v-item" data-sub="relatorio" type="button"><span class="aj-ico">🖨️</span><span>Relatório hospital/convênio</span><span class="aj-seta">›</span></button>
       </div>
     </div>
+
+    <section class="painel v-sec" data-sub="situacao" aria-label="Situação das cirurgias" style="margin-top:16px">
+      <div class="painel-cab">
+        <h2>Situação das cirurgias</h2>
+        <span class="conta" id="sit-conta"></span>
+      </div>
+      <div class="painel-corpo">
+        <p style="font-size:.8rem;color:var(--cinza);margin-bottom:10px">Toque para mudar: <b>Agendada · Realizada · Paga</b>. Ao marcar Paga, o recebimento do valor em aberto é registrado automaticamente.</p>
+        <div id="situacao"></div>
+      </div>
+    </section>
 
     <section class="painel v-sec" data-sub="comparador" aria-label="Comparador de convênios" style="margin-top:16px">
       <div class="painel-cab">
@@ -1090,6 +1128,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
               <option value="cirurgiao">Cirurgião principal</option>
               <option value="aux1">1º auxiliar</option>
               <option value="aux2">2º auxiliar</option>
+              <option value="aux3">3º auxiliar</option>
               <option value="instrumentador">Instrumentador</option>
             </select>
           </label>
@@ -1946,6 +1985,7 @@ async function carregarTudo(){
     renderRecentes(recentes.data || []);
     renderKpis(fila.data || [], mes.data || []);
     popularFiltrosRelatorio(filtrosRel.data || []);
+    carregarSituacao();
   } catch (e) {
     $("faixa-erro").hidden = false;
     $("faixa-erro").textContent = "Erro ao ler a tabela cirurgias: " + (e.message || e) +
@@ -2266,6 +2306,81 @@ async function relConferir(){
   alvo.appendChild(rodape);
 }
 
+/* ---------- Situação das cirurgias (Financeiro): Agendada · Realizada · Paga ---------- */
+async function carregarSituacao(){
+  const alvo = $("situacao");
+  if (!alvo) return;
+  try {
+    const { data, error } = await sb.from("vw_cirurgias_completa")
+      .select("id,nome_procedimento,paciente_nome,convenio_ref,convenio_nome,hospital_ref,hospital_nome,data_cirurgia,data_realizacao,status,valor_previsto,total_pago")
+      .not("status", "in", "(cancelada,recusada)")
+      .order("created_at", { ascending: false })
+      .limit(40);
+    if (error) throw error;
+    const linhas = data || [];
+    $("sit-conta").textContent = linhas.length ? String(linhas.length) : "";
+    if (!linhas.length) { alvo.innerHTML = '<div class="vazio">Nenhuma cirurgia registrada ainda.</div>'; return; }
+    alvo.innerHTML = "";
+    linhas.forEach(c => {
+      const div = document.createElement("div");
+      div.className = "sit-linha";
+      const saldo = Math.max(0, Number(c.valor_previsto || 0) - Number(c.total_pago || 0));
+      const quando = c.data_cirurgia ? fmtData(c.data_cirurgia, false) : "sem data";
+      div.innerHTML = '<div class="sit-nome" style="cursor:pointer"></div><div class="sit-sub"></div><div class="sit-seg"></div>';
+      div.querySelector(".sit-nome").textContent = quando + " · " + (c.nome_procedimento || "cirurgia") + (c.paciente_nome ? " · " + c.paciente_nome : "");
+      div.querySelector(".sit-nome").addEventListener("click", () => abrirDetalhe(c.id));
+      div.querySelector(".sit-sub").textContent = (c.convenio_ref || c.convenio_nome || "—") +
+        " · previsto " + brl.format(Number(c.valor_previsto || 0)) +
+        (saldo > 0.009 ? " · em aberto " + brl.format(saldo) : " · quitada");
+      const seg = div.querySelector(".sit-seg");
+      if (c.status === "aguardando_confirmacao") {
+        seg.innerHTML = '<span style="font-size:.78rem;color:var(--ambar);font-weight:600">Na Fila de confirmação — confirme no Início</span>';
+      } else {
+        const ativo = c.status === "paga" ? "paga" : (c.status === "realizada" || c.status === "faturada") ? "realizada" : "confirmada";
+        [["confirmada","Agendada"],["realizada","Realizada"],["paga","Paga"]].forEach(([st, rot]) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.textContent = rot;
+          if (st === ativo) b.classList.add("ativo");
+          else b.addEventListener("click", () => sitMudar(c, st, b));
+          seg.appendChild(b);
+        });
+      }
+      alvo.appendChild(div);
+    });
+  } catch (e) {
+    alvo.innerHTML = '<div class="vazio">Lista indisponível: ' + (e.message || e) + '</div>';
+  }
+}
+
+async function sitMudar(c, st, btn){
+  if (btn.disabled) return;
+  btn.disabled = true; btn.textContent = "…";
+  if (st === "paga") {
+    const saldo = Math.max(0, Number(c.valor_previsto || 0) - Number(c.total_pago || 0));
+    if (saldo > 0.009) {
+      const chave = (crypto.randomUUID ? crypto.randomUUID()
+        : Date.now() + "-" + Math.random().toString(36).slice(2));
+      const { error } = await sb.from("pagamentos").insert({
+        cirurgia_id: c.id, valor: saldo, data_pagamento: new Date().toISOString().slice(0, 10),
+        fonte: "conferencia", idempotency_key: chave
+      });
+      if (error && error.code !== "23505") { toast("Não foi possível registrar o pagamento: " + error.message, true); carregarSituacao(); return; }
+    }
+    await sb.from("cirurgias").update({ status: "paga" }).eq("id", c.id).neq("status", "paga");
+    toast(saldo > 0.009 ? "Recebimento de " + brl.format(saldo) + " registrado — marcada como Paga." : "Marcada como Paga.");
+  } else {
+    const upd = { status: st };
+    if (st === "realizada" && !c.data_realizacao)
+      upd.data_realizacao = String(c.data_cirurgia || new Date().toISOString()).slice(0, 10);
+    const { error } = await sb.from("cirurgias").update(upd).eq("id", c.id);
+    if (error) { toast("Não foi possível alterar: " + error.message, true); carregarSituacao(); return; }
+    toast(st === "confirmada" ? "Marcada como Agendada." : "Marcada como Realizada.");
+  }
+  carregarSituacao();
+  carregarTudo();
+}
+
 async function relMarcarPago(c, saldo, btn){
   if (btn.disabled) return;
   btn.disabled = true; btn.textContent = "Registrando…";
@@ -2517,11 +2632,12 @@ async function agSugerirProcedimentos(){
 async function agCriar(){
   const ok = await criarCirurgiaDash({
     itens: agItens, procId: "ag-proc", dataId: "ag-data", pacId: "ag-pac",
-    hospId: "ag-hosp", convId: "ag-conv", valorId: "ag-valor", btnId: "ag-salvar", urgId: "ag-urg"
+    hospId: "ag-hosp", convId: "ag-conv", valorId: "ag-valor", btnId: "ag-salvar", urgId: "ag-urg", papelId: "ag-papel"
   });
   if (!ok) return;
   ["ag-data","ag-proc","ag-pac","ag-hosp","ag-conv","ag-valor"].forEach(id => $(id).value = "");
   $("ag-urg").checked = false;
+  $("ag-papel").value = "cirurgiao";
   agItens = []; chipsRender("ag-chips", agItens);
   $("ag-form").hidden = true;
   carregarTudo();
@@ -2611,6 +2727,7 @@ async function criarCirurgiaDash(cfg){
   const procAtual = $(cfg.procId).value.trim();
   if (procAtual) itens.push({ nome: procAtual, outraVia: false });
   const urgente = cfg.urgId ? $(cfg.urgId).checked : false;
+  const papel = cfg.papelId ? ($(cfg.papelId).value || "cirurgiao") : "cirurgiao";
   const dataTxt = $(cfg.dataId).value;
   if (!dataTxt || !itens.length) { toast("Preencha data/hora e procedimento.", true); return false; }
   const quando = new Date(dataTxt);
@@ -2631,14 +2748,16 @@ async function criarCirurgiaDash(cfg){
     data_cirurgia: quando.toISOString(),
     valor_previsto: valor > 0 ? valor : null,
     urgencia: urgente,
+    papel_medico: papel,
     status: futura ? "confirmada" : "aguardando_confirmacao",
     protocolo: (futura ? "AG-" : "MN-") + Date.now().toString(36).toUpperCase(),
     observacoes: futura ? "Agendado pelo dashboard" : "Lançado manualmente pelo dashboard"
   }).select("id").single();
   if (error) { btn.disabled = false; btn.textContent = rotulo; toast("Não foi possível salvar: " + error.message, true); return false; }
-  if (itens.length > 1 || urgente) await gravarComposicao(nova.id, itens);
+  if (itens.length > 1 || urgente || papel !== "cirurgiao") await gravarComposicao(nova.id, itens);
   btn.disabled = false; btn.textContent = rotulo;
-  const extra = itens.length > 1 ? " (" + itens.length + " procedimentos, valor calculado pelo contrato)" : (urgente ? " (urgência aplicada pelo contrato)" : "");
+  const extra = itens.length > 1 ? " (" + itens.length + " procedimentos, valor calculado pelo contrato)"
+    : (papel !== "cirurgiao" ? " (participação aplicada pelo contrato)" : (urgente ? " (urgência aplicada pelo contrato)" : ""));
   toast(futura
     ? "Agendamento criado" + extra + " — vai para o Google Agenda em até 5 min."
     : "Cirurgia registrada" + extra + " — entrou na Fila de confirmação.");
@@ -2648,11 +2767,12 @@ async function criarCirurgiaDash(cfg){
 async function lcCriar(){
   const ok = await criarCirurgiaDash({
     itens: lcItens, procId: "lc-proc", dataId: "lc-data", pacId: "lc-pac",
-    hospId: "lc-hosp", convId: "lc-conv", valorId: "lc-valor", btnId: "lc-salvar", urgId: "lc-urg"
+    hospId: "lc-hosp", convId: "lc-conv", valorId: "lc-valor", btnId: "lc-salvar", urgId: "lc-urg", papelId: "lc-papel"
   });
   if (!ok) return;
   ["lc-data","lc-proc","lc-pac","lc-hosp","lc-conv","lc-valor"].forEach(id => $(id).value = "");
   $("lc-urg").checked = false;
+  $("lc-papel").value = "cirurgiao";
   $("lc-transc").hidden = true;
   lcItens = []; chipsRender("lc-chips", lcItens);
   $("lc-form").hidden = true;
