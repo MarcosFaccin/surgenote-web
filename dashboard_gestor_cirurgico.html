@@ -81,7 +81,8 @@ button{font-family:inherit;cursor:pointer}
 .lc-consulta{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid #E89B1C;border-radius:12px;background:transparent;color:#E89B1C;font-weight:700;font-size:1rem;padding:12px 16px;transition:filter .15s;font-family:inherit;cursor:pointer}
 .lc-consulta:hover{filter:brightness(1.08)}
 .lc-consulta svg{width:22px;height:22px;flex-shrink:0}
-@media (max-width:640px){.lc-consulta span{display:none}}
+/* celular: mantém o rótulo visível (Dr. Augusto não reconhecia o botão só-ícone, 21/07) */
+@media (max-width:640px){.lc-consulta{font-size:.82rem;padding:10px 12px;gap:6px}.lc-consulta svg{width:18px;height:18px}}
 .lc-ditar.gravando{background:var(--vermelho);border-color:var(--vermelho);color:#fff;animation:lcPulsa 1.2s infinite}
 @keyframes lcPulsa{50%{filter:brightness(1.25)}}
 .lc-linha-cta{display:flex;gap:10px;justify-content:center;align-items:stretch;flex-wrap:wrap}
@@ -304,6 +305,22 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .kpi .sub{font-size:.78rem;color:var(--cinza);margin-top:4px}
 .kpi.atencao .valor{color:var(--ambar)}
 .kpi.alerta .valor{color:var(--vermelho)}
+
+/* Consulta às tabelas — tabela de resultados (vira lista empilhada no celular) */
+.ct-tab{width:100%;border-collapse:collapse;font-size:.84rem;min-width:640px}
+.ct-tab th{padding:6px 8px;text-align:left;color:var(--cinza);font-weight:600}
+.ct-tab td{padding:6px 8px;vertical-align:top}
+.ct-tab tr+tr{border-top:1px solid var(--linha)}
+.ct-tab .ct-cod{white-space:nowrap;font-variant-numeric:tabular-nums}
+.ct-tab .ct-valor{text-align:right;white-space:nowrap;font-weight:600}
+@media (max-width:640px){
+  .ct-tab{min-width:0;display:block}
+  .ct-tab tr{display:flex;flex-wrap:wrap;gap:2px 12px;padding:9px 2px}
+  .ct-tab tr:first-child{display:none}
+  .ct-tab td{display:block;padding:0;font-size:.8rem;color:var(--cinza)}
+  .ct-tab td.ct-nome{order:-1;flex:1 0 100%;font-weight:600;font-size:.88rem;color:var(--titulo);white-space:normal}
+  .ct-tab td.ct-valor{margin-left:auto;color:var(--titulo);font-weight:700}
+}
 
 /* grade principal */
 .painel{background:var(--branco);border:1px solid var(--linha);border-radius:var(--raio)}
@@ -711,7 +728,6 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
       <div class="kpi"><div class="rotulo">Cirurgias no mês</div><div class="valor" id="kpi-mes">–</div><div class="sub" id="kpi-mes-sub">registradas em <span id="mes-nome"></span></div></div>
       <div class="kpi"><div class="rotulo">Valor previsto</div><div class="valor" id="kpi-previsto">–</div><div class="sub">soma do mês corrente</div></div>
       <div class="kpi"><div class="rotulo">Recebido no mês</div><div class="valor" id="kpi-recebido">–</div><div class="sub" id="kpi-recebido-sub">pagamentos lançados</div></div>
-      <div class="kpi alerta"><div class="rotulo">Glosas em aberto</div><div class="valor" id="kpi-glosas">–</div><div class="sub" id="kpi-glosas-sub">a recorrer</div></div>
     </section>
 
     <section class="painel" aria-label="Fila de solicitações">
@@ -900,6 +916,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
             <span>Edição da tabela</span>
             <select id="ct-edicao" class="sel-status" style="width:100%;padding:11px 9px">
               <option value="2022">CBHPM 2022 (atual) + SUS</option>
+              <option value="todas">Todas as tabelas</option>
             </select>
           </label>
         </div>
@@ -2009,16 +2026,6 @@ async function carregarFinanceiro(){
   } catch (e) {
     $("kpi-recebido").textContent = "—";
     $("kpi-recebido-sub").textContent = "tabela pagamentos indisponível";
-  }
-  try {
-    const gl = await sb.from("glosas").select("valor_glosado,status").in("status", ["aberta", "recurso_enviado"]);
-    if (gl.error) throw gl.error;
-    const soma = (gl.data || []).reduce((s, g) => s + Number(g.valor_glosado || 0), 0);
-    $("kpi-glosas").textContent = String((gl.data || []).length);
-    $("kpi-glosas-sub").textContent = brl.format(soma) + " a recorrer";
-  } catch (e) {
-    $("kpi-glosas").textContent = "—";
-    $("kpi-glosas-sub").textContent = "tabela glosas indisponível";
   }
 }
 
@@ -3229,17 +3236,25 @@ async function dtCarregarComposicao(){
 async function dtSugerirProc(){
   const termo = $("dt-add-proc").value.trim();
   if (termo.length < 3) { acFechar(); return; }
-  const [meus, susRes, proprios] = await Promise.all([
+  const tPref = termo.replace(/[%,]/g, "");
+  const [meusPref, meus, susRes, proprios] = await Promise.all([
+    sb.from("vw_meus_valores").select("codigo,nome_procedimento,valor_efetivo")
+      .ilike("nome_procedimento", tPref + "%").order("nome_procedimento").limit(10),
     sb.from("vw_meus_valores").select("codigo,nome_procedimento,valor_efetivo")
       .or(filtroBuscaProc(termo, "nome_procedimento")).order("nome_procedimento").limit(10),
     sb.from("procedimentos").select("codigo,nome,valor_sus").eq("ativo", true).eq("tabela", "sus")
       .or(filtroBuscaProc(termo, "nome")).order("nome").limit(6),
     sb.from("procedimentos_proprios").select("nome,categoria,valor").eq("ativo", true)
-      .ilike("nome", "%" + termo.replace(/[%,]/g, "") + "%").order("nome").limit(8)
+      .ilike("nome", "%" + tPref + "%").order("nome").limit(8)
   ]);
   const itens = [];
   (proprios.data || []).forEach(p => itens.push({ nome: p.nome, rotulo: p.categoria + " (próprio) · " + brl.format(Number(p.valor)) }));
-  (meus.data || []).forEach(p => itens.push({ nome: p.nome_procedimento, rotulo: p.codigo + " · CBHPM · " + brl.format(Number(p.valor_efetivo || 0)) }));
+  const vistosM = new Set();
+  [...(meusPref.data || []), ...(meus.data || [])].forEach(p => {
+    if (vistosM.has(p.codigo)) return;
+    vistosM.add(p.codigo);
+    itens.push({ nome: p.nome_procedimento, rotulo: p.codigo + " · CBHPM · " + brl.format(Number(p.valor_efetivo || 0)) });
+  });
   (susRes.data || []).forEach(p => itens.push({ nome: p.nome, rotulo: p.codigo + " · SUS · " + brl.format(Number(p.valor_sus || 0)) }));
   acMostrar($("dt-add-proc"), itens);
 }
@@ -3604,7 +3619,7 @@ async function aplicarPapel(){
   document.querySelectorAll('.aba[data-view="financeiro"]').forEach(a => a.style.display = fin ? "" : "none");
   const hero = document.querySelector(".hero30");
   if (hero) hero.style.display = fin ? "" : "none";
-  ["kpi-previsto","kpi-recebido","kpi-glosas"].forEach(id => {
+  ["kpi-previsto","kpi-recebido"].forEach(id => {
     const el = $(id); if (el) el.closest(".kpi").style.display = fin ? "" : "none";
   });
   const pg = document.querySelector(".dt-pagamento");
@@ -3731,6 +3746,7 @@ document.getElementById("ct-busca")?.addEventListener("input", () => {
   ctTimer = setTimeout(consultarTabelas, 350);
 });
 document.getElementById("ct-edicao")?.addEventListener("change", consultarTabelas);
+let ctEdicaoRotulos = {};
 async function ctPopularEdicoes(){
   if (ctEdicoesCarregadas) return;
   ctEdicoesCarregadas = true;
@@ -3739,11 +3755,23 @@ async function ctPopularEdicoes(){
   const { data, error } = await sb.from("cbhpm_edicoes").select("id,rotulo,ordem").neq("id", "2022").order("ordem");
   if (error || !data) return;
   data.forEach(e => {
+    ctEdicaoRotulos[e.id] = e.rotulo;
     const opt = document.createElement("option");
     opt.value = e.id;
     opt.textContent = e.rotulo;
     sel.appendChild(opt);
   });
+}
+/* ordena por relevância: nome que COMEÇA com o termo vem antes de quem só o contém no meio */
+function ctOrdenar(linhas, termo){
+  const tl = termo.toLowerCase();
+  linhas.sort((a, b) => {
+    const ia = (a.nome || "").toLowerCase().indexOf(tl), ib = (b.nome || "").toLowerCase().indexOf(tl);
+    const pa = ia === 0 ? 0 : 1, pb = ib === 0 ? 0 : 1;
+    if (pa !== pb) return pa - pb;
+    return (a.nome || "").localeCompare(b.nome || "");
+  });
+  return linhas;
 }
 async function consultarTabelas(){
   const termo = (document.getElementById("ct-busca").value || "").trim();
@@ -3751,33 +3779,61 @@ async function consultarTabelas(){
   const conta = document.getElementById("ct-conta");
   if (termo.length < 3) { alvo.innerHTML = ""; conta.textContent = ""; return; }
   const edicao = document.getElementById("ct-edicao")?.value || "2022";
-  if (edicao !== "2022") { return consultarEdicaoAntiga(edicao, termo, alvo, conta); }
+  if (edicao !== "2022" && edicao !== "todas") { return consultarEdicaoAntiga(edicao, termo, alvo, conta); }
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
   const t = termo.replace(/[%,]/g, "");
-  const { data, error } = await sb.from("procedimentos")
-    .select("codigo, nome, tabela, porte, valor_porte, valor_sus, porte_anestesico, num_auxiliares")
-    .eq("ativo", true)
-    .or(filtroBuscaProc(termo, "nome"))
-    .order("nome").limit(30);
-  if (error) { alvo.innerHTML = '<p style="color:var(--vermelho);font-size:.85rem">Erro na consulta: ' + esc(error.message) + '</p>'; return; }
-  if (!data || !data.length) { alvo.innerHTML = '<p style="color:var(--cinza);font-size:.85rem">Nada encontrado para "' + esc(termo) + '".</p>'; conta.textContent = "0"; return; }
-  conta.textContent = data.length + (data.length === 30 ? "+" : "");
-  let html = '<table style="width:100%;border-collapse:collapse;font-size:.84rem;min-width:640px">' +
-    '<tr style="color:var(--cinza);text-align:left"><th style="padding:6px 8px">Código</th><th style="padding:6px 8px">Procedimento</th><th style="padding:6px 8px">Tabela</th><th style="padding:6px 8px">Porte</th><th style="padding:6px 8px">Aux.</th><th style="padding:6px 8px;text-align:right">Valor ref.</th></tr>';
-  data.forEach(p => {
-    const sus = p.tabela === "sus";
-    const valor = sus ? p.valor_sus : p.valor_porte;
-    html += '<tr style="border-top:1px solid var(--linha)">' +
-      '<td style="padding:6px 8px;white-space:nowrap;font-variant-numeric:tabular-nums">' + esc(p.codigo) + '</td>' +
-      '<td style="padding:6px 8px">' + esc(p.nome) + '</td>' +
-      '<td style="padding:6px 8px">' + (sus ? "SUS" : "CBHPM") + '</td>' +
-      '<td style="padding:6px 8px">' + esc(p.porte || "—") + (p.porte_anestesico ? ' <span style="color:var(--cinza)">(anest. ' + esc(p.porte_anestesico) + ')</span>' : '') + '</td>' +
-      '<td style="padding:6px 8px">' + (p.num_auxiliares ?? "—") + '</td>' +
-      '<td style="padding:6px 8px;text-align:right;white-space:nowrap;font-weight:600">' + (valor != null ? brl.format(Number(valor)) : "—") + '</td>' +
+  const sel = "codigo, nome, tabela, porte, valor_porte, valor_sus, porte_anestesico, num_auxiliares";
+  // duas buscas: prefixo (prioridade) + termo em qualquer posição — senão nomes longos
+  // tipo "Esofagectomia com linfadenectomia" enchem o limite e escondem "Linfadenectomia ..."
+  const [pref, subs] = await Promise.all([
+    sb.from("procedimentos").select(sel).eq("ativo", true).ilike("nome", t + "%").order("nome").limit(30),
+    sb.from("procedimentos").select(sel).eq("ativo", true).or(filtroBuscaProc(termo, "nome")).order("nome").limit(70)
+  ]);
+  if (pref.error || subs.error) { alvo.innerHTML = '<p style="color:var(--vermelho);font-size:.85rem">Erro na consulta: ' + esc((pref.error || subs.error).message) + '</p>'; return; }
+  const vistos = new Set();
+  const linhas = [];
+  [...(pref.data || []), ...(subs.data || [])].forEach(p => {
+    const k = p.tabela + "|" + p.codigo;
+    if (vistos.has(k)) return;
+    vistos.add(k);
+    linhas.push({ codigo: p.codigo, nome: p.nome, tab: p.tabela === "sus" ? "SUS" : "CBHPM 2022",
+      porte: p.porte, pa: p.porte_anestesico, aux: p.num_auxiliares,
+      valor: p.tabela === "sus" ? p.valor_sus : p.valor_porte });
+  });
+  if (edicao === "todas") {
+    const t2 = termo.replace(/[%,()]/g, "");
+    const sel2 = "codigo_fmt, nome, porte, n_auxiliares, porte_anestesico, edicao";
+    const [ep, es] = await Promise.all([
+      sb.from("cbhpm_edicoes_itens").select(sel2).ilike("nome", t2 + "%").order("nome").limit(40),
+      sb.from("cbhpm_edicoes_itens").select(sel2).ilike("nome", "%" + t2 + "%").order("nome").limit(80)
+    ]);
+    const vs = new Set();
+    [...(ep.data || []), ...(es.data || [])].forEach(p => {
+      const k = p.edicao + "|" + p.codigo_fmt;
+      if (vs.has(k)) return;
+      vs.add(k);
+      linhas.push({ codigo: p.codigo_fmt, nome: p.nome, tab: ctEdicaoRotulos[p.edicao] || ("CBHPM " + p.edicao),
+        porte: p.porte, pa: p.porte_anestesico, aux: p.n_auxiliares, valor: null });
+    });
+  }
+  if (!linhas.length) { alvo.innerHTML = '<p style="color:var(--cinza);font-size:.85rem">Nada encontrado para "' + esc(termo) + '".</p>'; conta.textContent = "0"; return; }
+  ctOrdenar(linhas, t);
+  conta.textContent = linhas.length + (linhas.length >= 100 ? "+" : "");
+  let html = '<table class="ct-tab">' +
+    '<tr><th>Código</th><th>Procedimento</th><th>Tabela</th><th>Porte</th><th>Aux.</th><th style="text-align:right">Valor ref.</th></tr>';
+  linhas.forEach(p => {
+    html += '<tr>' +
+      '<td class="ct-cod">' + esc(p.codigo) + '</td>' +
+      '<td class="ct-nome">' + esc(p.nome) + '</td>' +
+      '<td>' + esc(p.tab) + '</td>' +
+      '<td>' + esc(p.porte || "—") + (p.pa ? ' <span style="color:var(--cinza)">(anest. ' + esc(p.pa) + ')</span>' : '') + '</td>' +
+      '<td>' + (p.aux ?? "—") + '</td>' +
+      '<td class="ct-valor">' + (p.valor != null ? brl.format(Number(p.valor)) : "—") + '</td>' +
       '</tr>';
   });
   alvo.innerHTML = html + '</table>' +
-    '<p style="font-size:.75rem;color:var(--cinza);margin-top:8px">Valores de referência (CBHPM/SUS) — não substituem a tabela contratual de cada convênio.</p>';
+    '<p style="font-size:.75rem;color:var(--cinza);margin-top:8px">Valores de referência (CBHPM/SUS) — não substituem a tabela contratual de cada convênio.' +
+    (edicao === "todas" ? ' Edições antigas mostram porte (o valor em R$ depende do valor de porte de cada convênio).' : '') + '</p>';
 }
 async function consultarEdicaoAntiga(edicao, termo, alvo, conta){
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
@@ -3785,23 +3841,34 @@ async function consultarEdicaoAntiga(edicao, termo, alvo, conta){
   const dig = t.replace(/\D/g, "");
   const partes = ["nome.ilike.%" + t + "%", "codigo_fmt.ilike.%" + t + "%"];
   if (dig.length >= 3 && /^[\d.\-\s]+$/.test(t)) partes.push("codigo_fmt.ilike." + formatarCodigoCbhpm(dig) + "%");
-  let q = sb.from("cbhpm_edicoes_itens")
-    .select("codigo_fmt, nome, porte, uco, n_auxiliares, porte_anestesico")
-    .eq("edicao", edicao).order("nome").limit(30);
-  q = (dig.length >= 6 && /^[\d.\-\s]+$/.test(t)) ? q.eq("codigo", Number(dig)) : q.or(partes.join(","));
-  const { data, error } = await q;
+  const sel2 = "codigo_fmt, nome, porte, uco, n_auxiliares, porte_anestesico";
+  const porCodigo = dig.length >= 6 && /^[\d.\-\s]+$/.test(t);
+  let data, error;
+  if (porCodigo) {
+    ({ data, error } = await sb.from("cbhpm_edicoes_itens").select(sel2).eq("edicao", edicao).eq("codigo", Number(dig)).order("nome").limit(30));
+  } else {
+    // prefixo primeiro + termo em qualquer posição (mesma relevância da tabela atual)
+    const [pref, subs] = await Promise.all([
+      sb.from("cbhpm_edicoes_itens").select(sel2).eq("edicao", edicao).ilike("nome", t + "%").order("nome").limit(30),
+      sb.from("cbhpm_edicoes_itens").select(sel2).eq("edicao", edicao).or(partes.join(",")).order("nome").limit(70)
+    ]);
+    error = pref.error || subs.error;
+    const vistos = new Set();
+    data = [...(pref.data || []), ...(subs.data || [])].filter(p => !vistos.has(p.codigo_fmt) && vistos.add(p.codigo_fmt));
+    ctOrdenar(data, t);
+  }
   if (error) { alvo.innerHTML = '<p style="color:var(--vermelho);font-size:.85rem">Erro: ' + esc(error.message) + '</p>'; return; }
   if (!data || !data.length) { alvo.innerHTML = '<p style="color:var(--cinza);font-size:.85rem">Nada encontrado para "' + esc(termo) + '".</p>'; conta.textContent = "0"; return; }
-  conta.textContent = data.length + (data.length === 30 ? "+" : "");
-  let html = '<table style="width:100%;border-collapse:collapse;font-size:.84rem;min-width:640px">' +
-    '<tr style="color:var(--cinza);text-align:left"><th style="padding:6px 8px">Código</th><th style="padding:6px 8px">Procedimento</th><th style="padding:6px 8px">Porte</th><th style="padding:6px 8px">UCO</th><th style="padding:6px 8px">Aux.</th></tr>';
+  conta.textContent = String(data.length);
+  let html = '<table class="ct-tab">' +
+    '<tr><th>Código</th><th>Procedimento</th><th>Porte</th><th>UCO</th><th>Aux.</th></tr>';
   data.forEach(p => {
-    html += '<tr style="border-top:1px solid var(--linha)">' +
-      '<td style="padding:6px 8px;white-space:nowrap;font-variant-numeric:tabular-nums">' + esc(p.codigo_fmt) + '</td>' +
-      '<td style="padding:6px 8px">' + esc(p.nome) + '</td>' +
-      '<td style="padding:6px 8px">' + esc(p.porte || "—") + (p.porte_anestesico ? ' <span style="color:var(--cinza)">(anest. ' + esc(p.porte_anestesico) + ')</span>' : '') + '</td>' +
-      '<td style="padding:6px 8px">' + (p.uco != null ? esc(p.uco) : "—") + '</td>' +
-      '<td style="padding:6px 8px">' + (p.n_auxiliares ?? "—") + '</td></tr>';
+    html += '<tr>' +
+      '<td class="ct-cod">' + esc(p.codigo_fmt) + '</td>' +
+      '<td class="ct-nome">' + esc(p.nome) + '</td>' +
+      '<td>' + esc(p.porte || "—") + (p.porte_anestesico ? ' <span style="color:var(--cinza)">(anest. ' + esc(p.porte_anestesico) + ')</span>' : '') + '</td>' +
+      '<td>' + (p.uco != null ? esc(p.uco) : "—") + '</td>' +
+      '<td>' + (p.n_auxiliares ?? "—") + '</td></tr>';
   });
   alvo.innerHTML = html + '</table>' +
     '<p style="font-size:.75rem;color:var(--cinza);margin-top:8px">Edições antigas mostram porte e UCO — o valor em R$ depende do valor de porte de cada convênio (configure em Meus contratos). Tabelas CBHPM © AMB.</p>';
@@ -3897,13 +3964,23 @@ async function ditPreencher(transcricao, c){
 
 async function buscarProcedimentosTodos(termo){
   const t = termo.replace(/[%,]/g, "");
-  const [cat, prop] = await Promise.all([
+  // prefixo em consulta separada: sem ela, nomes longos que CONTÊM o termo
+  // ("Esofagectomia com linfadenectomia") enchem o limite alfabético e
+  // escondem os que COMEÇAM com ele ("Linfadenectomia retroperitoneal")
+  const [catPref, cat, prop] = await Promise.all([
+    sb.from("procedimentos").select("nome, codigo, tabela").eq("ativo", true).ilike("nome", t + "%").order("nome").limit(12),
     sb.from("procedimentos").select("nome, codigo, tabela").eq("ativo", true).ilike("nome", "%" + t + "%").order("nome").limit(12),
     sb.from("procedimentos_proprios").select("nome, categoria, valor").eq("ativo", true).ilike("nome", "%" + t + "%").order("nome").limit(8)
   ]);
   const lista = [];
   (prop.data || []).forEach(p => lista.push({ nome: p.nome, rotulo: p.categoria + " · " + brl.format(Number(p.valor)), valor: Number(p.valor), proprio: true }));
-  (cat.data || []).forEach(p => lista.push({ nome: p.nome, rotulo: p.codigo + " · " + (p.tabela === "sus" ? "SUS" : "CBHPM"), proprio: false }));
+  const vistos = new Set();
+  [...(catPref.data || []), ...(cat.data || [])].forEach(p => {
+    const k = p.tabela + "|" + p.codigo;
+    if (vistos.has(k)) return;
+    vistos.add(k);
+    lista.push({ nome: p.nome, rotulo: p.codigo + " · " + (p.tabela === "sus" ? "SUS" : "CBHPM"), proprio: false });
+  });
   return lista;
 }
 
