@@ -1674,8 +1674,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   ligarSugestaoCatalogo("ag-hosp", "hospitais");
   ligarSugestaoCatalogo("lc-conv", "convenios");
   ligarSugestaoCatalogo("ag-conv", "convenios");
-  ligarApto2x("lc-apto", "lc-valor");
-  ligarApto2x("ag-apto", "ag-valor");
+  ligarApto2x("lc-apto", "lc-valor", "lc-conv");
+  ligarApto2x("ag-apto", "ag-valor", "ag-conv");
   $("mv-busca").addEventListener("input", () => {
     clearTimeout(mvTimer);
     mvTimer = setTimeout(mvBuscar, 350);
@@ -2689,9 +2689,13 @@ async function lcSugerirProcedimentos(){
   const itens = await buscarProcedimentosTodos(termo);
   acMostrar($("lc-proc"), itens);
 }
-async function lcPreencherValor(){ return preencherValorAuto("lc-proc", "lc-valor"); }
-async function agPreencherValor(){ return preencherValorAuto("ag-proc", "ag-valor"); }
-async function preencherValorAuto(procId, valorId){
+async function lcPreencherValor(){ return preencherValorAuto("lc-proc", "lc-valor", "lc-conv", "lc-apto"); }
+async function agPreencherValor(){ return preencherValorAuto("ag-proc", "ag-valor", "ag-conv", "ag-apto"); }
+/* SUS nunca tem acréscimo de acomodação — mesmo critério usado no detalhe */
+function convenioEhSUS(convId){
+  return convId ? ($(convId).value || "").trim().toUpperCase() === "SUS" : false;
+}
+async function preencherValorAuto(procId, valorId, convId, aptoId){
   const nome = $(procId).value.trim();
   if (!nome || $(valorId).value) return;
   let { data: p } = await sb.from("vw_meus_valores")
@@ -2701,11 +2705,20 @@ async function preencherValorAuto(procId, valorId){
       .select("valor").eq("ativo", true).eq("nome", nome).limit(1).maybeSingle();
     if (pr) p = { valor_efetivo: pr.valor };
   }
-  if (p && Number(p.valor_efetivo) > 0) $(valorId).value = Number(p.valor_efetivo).toFixed(2);
+  if (p && Number(p.valor_efetivo) > 0) {
+    let valor = Number(p.valor_efetivo);
+    if (aptoId && $(aptoId).checked && !convenioEhSUS(convId)) valor *= 2;
+    $(valorId).value = valor.toFixed(2);
+  }
 }
 /* ---------- apartamento (honorário 2×): dobra/divide o valor manual na hora ---------- */
-function ligarApto2x(aptoId, valorId){
+function ligarApto2x(aptoId, valorId, convId){
   $(aptoId).addEventListener("change", (e) => {
+    if (e.target.checked && convenioEhSUS(convId)) {
+      e.target.checked = false;
+      toast("SUS não tem acréscimo de acomodação.", true);
+      return;
+    }
     const v = Number($(valorId).value);
     if (!(v > 0)) return;
     $(valorId).value = (e.target.checked ? v * 2 : v / 2).toFixed(2);
@@ -2774,7 +2787,8 @@ async function criarCirurgiaDash(cfg){
   const procAtual = $(cfg.procId).value.trim();
   if (procAtual) itens.push({ nome: procAtual, outraVia: false });
   const urgente = cfg.urgId ? $(cfg.urgId).checked : false;
-  const apto = cfg.aptoId ? $(cfg.aptoId).checked : false;
+  const souSUS = convenioEhSUS(cfg.convId);
+  const apto = cfg.aptoId ? ($(cfg.aptoId).checked && !souSUS) : false;
   const papel = cfg.papelId ? ($(cfg.papelId).value || "cirurgiao") : "cirurgiao";
   const dataTxt = $(cfg.dataId).value;
   if (!dataTxt || !itens.length) { toast("Preencha data/hora e procedimento.", true); return false; }
@@ -3514,14 +3528,15 @@ async function dtToggleApto(marcado){
     return;
   }
   if (dtItens.length) {
+    // dtRecalcular já atualiza dtCirurgia, o checkbox (via dtCarregarComposicao) e a lista (carregarTudo) — não duplicar.
     await dtRecalcular();
-  } else {
-    const atual = Number(dtCirurgia.valor_previsto || 0);
-    if (atual > 0) {
-      const novo = marcado ? atual * 2 : atual / 2;
-      await sb.from("cirurgias").update({ valor_previsto: novo }).eq("id", dtCirurgia.id);
-      toast("Valor previsto " + (marcado ? "dobrado" : "restaurado") + ": " + brl.format(novo));
-    }
+    return;
+  }
+  const atual = Number(dtCirurgia.valor_previsto || 0);
+  if (atual > 0) {
+    const novo = marcado ? atual * 2 : atual / 2;
+    await sb.from("cirurgias").update({ valor_previsto: novo }).eq("id", dtCirurgia.id);
+    toast("Valor previsto " + (marcado ? "dobrado" : "restaurado") + ": " + brl.format(novo));
   }
   abrirDetalhe(dtCirurgia.id); carregarTudo();
 }
