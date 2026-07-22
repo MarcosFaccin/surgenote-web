@@ -2426,7 +2426,7 @@ async function pgConfirmar(){
     }
   }
   await sb.from("cirurgias").update({ status: "paga" }).eq("id", pgAlvo.id).neq("status","paga");
-  btn.disabled = false; $("pg-fundo").hidden = true;
+  $("pg-fundo").hidden = true; btn.disabled = false;
   toast(valor > 0.009 ? "Recebimento de " + brl.format(valor) + " registrado — marcada como Paga." : "Marcada como Paga.");
   if (pgDepois) pgDepois();
 }
