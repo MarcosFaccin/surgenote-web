@@ -704,6 +704,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
           <label class="campo" style="margin:0"><span>Valor previsto (R$)</span><input type="number" id="lc-valor" step="0.01" min="0" placeholder="preenchido ao escolher"></label>
         </div>
         <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.85rem;color:var(--grafite);cursor:pointer"><input type="checkbox" id="lc-urg"> ⚡ Urgência/emergência (aplica o acréscimo do contrato — padrão +30%)</label>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.85rem;color:var(--grafite);cursor:pointer"><input type="checkbox" id="lc-apto"> 🏨 Apartamento (honorário 2×)</label>
         <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.85rem;color:var(--grafite)">Participação:
           <select id="lc-papel" class="sel-status" style="padding:8px">
             <option value="cirurgiao">Cirurgião principal</option>
@@ -782,6 +783,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
               <label class="campo" style="margin:0"><span>Valor previsto (R$)</span><input type="number" id="ag-valor" step="0.01" min="0" placeholder="preenchido ao escolher"></label>
             </div>
             <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.85rem;color:var(--grafite);cursor:pointer"><input type="checkbox" id="ag-urg"> ⚡ Urgência/emergência (aplica o acréscimo do contrato — padrão +30%)</label>
+            <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.85rem;color:var(--grafite);cursor:pointer"><input type="checkbox" id="ag-apto"> 🏨 Apartamento (honorário 2×)</label>
             <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.85rem;color:var(--grafite)">Participação:
               <select id="ag-papel" class="sel-status" style="padding:8px">
                 <option value="cirurgiao">Cirurgião principal</option>
@@ -1133,6 +1135,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
         </div>
         <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:10px">
           <label style="display:flex;align-items:center;gap:6px;font-size:.84rem"><input type="checkbox" id="dt-urgencia"> Urgência/emergência</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.84rem"><input type="checkbox" id="dt-apto"> 🏨 Apartamento (2×)</label>
           <label style="display:flex;align-items:center;gap:6px;font-size:.84rem">Participação:
             <select id="dt-papel" class="sel-status" style="padding:6px">
               <option value="cirurgiao">Cirurgião principal</option>
@@ -1658,6 +1661,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("pg-cancelar").addEventListener("click", () => { $("pg-fundo").hidden = true; });
   $("dt-add-btn").addEventListener("click", dtIncluirItem);
   $("dt-recalcular").addEventListener("click", dtRecalcular);
+  $("dt-apto").addEventListener("change", (e) => dtToggleApto(e.target.checked));
   $("dt-add-proc").addEventListener("input", () => { clearTimeout(dtProcTimer); dtProcTimer = setTimeout(dtSugerirProc, 300); });
   $("eq-btn").addEventListener("click", criarMembroEquipe);
   $("pp-btn").addEventListener("click", ppCriar);
@@ -1670,6 +1674,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   ligarSugestaoCatalogo("ag-hosp", "hospitais");
   ligarSugestaoCatalogo("lc-conv", "convenios");
   ligarSugestaoCatalogo("ag-conv", "convenios");
+  ligarApto2x("lc-apto", "lc-valor");
+  ligarApto2x("ag-apto", "ag-valor");
   $("mv-busca").addEventListener("input", () => {
     clearTimeout(mvTimer);
     mvTimer = setTimeout(mvBuscar, 350);
@@ -2663,11 +2669,12 @@ async function agSugerirProcedimentos(){
 async function agCriar(){
   const ok = await criarCirurgiaDash({
     itens: agItens, procId: "ag-proc", dataId: "ag-data", pacId: "ag-pac",
-    hospId: "ag-hosp", convId: "ag-conv", valorId: "ag-valor", btnId: "ag-salvar", urgId: "ag-urg", papelId: "ag-papel"
+    hospId: "ag-hosp", convId: "ag-conv", valorId: "ag-valor", btnId: "ag-salvar", urgId: "ag-urg", papelId: "ag-papel", aptoId: "ag-apto"
   });
   if (!ok) return;
   ["ag-data","ag-proc","ag-pac","ag-hosp","ag-conv","ag-valor"].forEach(id => $(id).value = "");
   $("ag-urg").checked = false;
+  $("ag-apto").checked = false;
   $("ag-papel").value = "cirurgiao";
   agItens = []; chipsRender("ag-chips", agItens);
   $("ag-form").hidden = true;
@@ -2696,6 +2703,15 @@ async function preencherValorAuto(procId, valorId){
   }
   if (p && Number(p.valor_efetivo) > 0) $(valorId).value = Number(p.valor_efetivo).toFixed(2);
 }
+/* ---------- apartamento (honorário 2×): dobra/divide o valor manual na hora ---------- */
+function ligarApto2x(aptoId, valorId){
+  $(aptoId).addEventListener("change", (e) => {
+    const v = Number($(valorId).value);
+    if (!(v > 0)) return;
+    $(valorId).value = (e.target.checked ? v * 2 : v / 2).toFixed(2);
+  });
+}
+
 /* ---------- multi-procedimento no lançamento/agendamento ---------- */
 let lcItens = [], agItens = [];
 function chipsRender(alvoId, arr){
@@ -2758,6 +2774,7 @@ async function criarCirurgiaDash(cfg){
   const procAtual = $(cfg.procId).value.trim();
   if (procAtual) itens.push({ nome: procAtual, outraVia: false });
   const urgente = cfg.urgId ? $(cfg.urgId).checked : false;
+  const apto = cfg.aptoId ? $(cfg.aptoId).checked : false;
   const papel = cfg.papelId ? ($(cfg.papelId).value || "cirurgiao") : "cirurgiao";
   const dataTxt = $(cfg.dataId).value;
   if (!dataTxt || !itens.length) { toast("Preencha data/hora e procedimento.", true); return false; }
@@ -2779,6 +2796,7 @@ async function criarCirurgiaDash(cfg){
     data_cirurgia: quando.toISOString(),
     valor_previsto: valor > 0 ? valor : null,
     urgencia: urgente,
+    acomodacao: apto ? "apartamento" : "enfermaria",
     papel_medico: papel,
     status: futura ? "confirmada" : "aguardando_confirmacao",
     protocolo: (futura ? "AG-" : "MN-") + Date.now().toString(36).toUpperCase()
@@ -2797,11 +2815,12 @@ async function criarCirurgiaDash(cfg){
 async function lcCriar(){
   const ok = await criarCirurgiaDash({
     itens: lcItens, procId: "lc-proc", dataId: "lc-data", pacId: "lc-pac",
-    hospId: "lc-hosp", convId: "lc-conv", valorId: "lc-valor", btnId: "lc-salvar", urgId: "lc-urg", papelId: "lc-papel"
+    hospId: "lc-hosp", convId: "lc-conv", valorId: "lc-valor", btnId: "lc-salvar", urgId: "lc-urg", papelId: "lc-papel", aptoId: "lc-apto"
   });
   if (!ok) return;
   ["lc-data","lc-proc","lc-pac","lc-hosp","lc-conv","lc-valor"].forEach(id => $(id).value = "");
   $("lc-urg").checked = false;
+  $("lc-apto").checked = false;
   $("lc-papel").value = "cirurgiao";
   $("lc-transc").hidden = true;
   lcItens = []; chipsRender("lc-chips", lcItens);
@@ -3385,6 +3404,7 @@ async function dtCarregarComposicao(){
     alvo.appendChild(nota);
   }
   $("dt-urgencia").checked = !!dtCirurgia.urgencia;
+  $("dt-apto").checked = dtCirurgia.acomodacao === "apartamento";
   $("dt-papel").value = dtCirurgia.papel_medico || "cirurgiao";
   $("dt-memoria").innerHTML = "";
 }
@@ -3454,6 +3474,7 @@ async function dtIncluirItem(){
 async function dtRecalcular(){
   await sb.from("cirurgias").update({
     urgencia: $("dt-urgencia").checked,
+    acomodacao: $("dt-apto").checked ? "apartamento" : "enfermaria",
     papel_medico: $("dt-papel").value
   }).eq("id", dtCirurgia.id);
   const { data, error } = await sb.rpc("recalcular_cirurgia", { p_cirurgia: dtCirurgia.id });
@@ -3468,6 +3489,7 @@ async function dtRecalcular(){
   if (Number(m.ajuste_pct)) txt += " · ajuste do contrato " + (m.ajuste_pct > 0 ? "+" : "") + m.ajuste_pct + "%";
   if (m.urgencia) txt += " · urgência +" + m.pct_urgencia + "%";
   if (m.papel !== "cirurgiao") txt += " · " + m.papel + " " + m.pct_papel + "%";
+  if (m.apartamento_2x) txt += " · ×2 (apartamento)";
   txt += " · *Total: " + brl.format(Number(m.total || 0)) + "*";
   const avisos = (m.itens || []).filter(it => it.aviso).map(it => it.aviso);
   if (avisos.length) txt += "\n" + avisos.join("\n");
@@ -3477,6 +3499,31 @@ async function dtRecalcular(){
   if (c) dtCirurgia = c;
   dtCarregarComposicao();
   carregarTudo();
+}
+
+/* ---------- apartamento no detalhe: liga na hora (sem esperar o botão Recalcular) ---------- */
+async function dtToggleApto(marcado){
+  if (!dtCirurgia) return;
+  const convNome = (dtCirurgia.convenio_ref || dtCirurgia.convenio_nome || "").trim().toUpperCase();
+  const { error } = await sb.from("cirurgias").update({ acomodacao: marcado ? "apartamento" : "enfermaria" }).eq("id", dtCirurgia.id);
+  if (error) { toast("Não foi possível salvar: " + error.message, true); return; }
+  dtCirurgia.acomodacao = marcado ? "apartamento" : "enfermaria";
+  if (convNome === "SUS") {
+    toast("SUS não tem acréscimo de acomodação.");
+    abrirDetalhe(dtCirurgia.id); carregarTudo();
+    return;
+  }
+  if (dtItens.length) {
+    await dtRecalcular();
+  } else {
+    const atual = Number(dtCirurgia.valor_previsto || 0);
+    if (atual > 0) {
+      const novo = marcado ? atual * 2 : atual / 2;
+      await sb.from("cirurgias").update({ valor_previsto: novo }).eq("id", dtCirurgia.id);
+      toast("Valor previsto " + (marcado ? "dobrado" : "restaurado") + ": " + brl.format(novo));
+    }
+  }
+  abrirDetalhe(dtCirurgia.id); carregarTudo();
 }
 
 /* ---------- meus contratos (regras por convênio) ---------- */
