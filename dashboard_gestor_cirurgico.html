@@ -2335,7 +2335,7 @@ async function relConferir(){
   alvo.appendChild(rodape);
 }
 
-/* ---------- Situação das cirurgias (Financeiro): Agendada · Realizada · Paga ---------- */
+/* ---------- Situação das cirurgias (Financeiro): Não realizada · Realizada · Paga ---------- */
 async function carregarSituacao(){
   const alvo = $("situacao");
   if (!alvo) return;
@@ -2365,8 +2365,8 @@ async function carregarSituacao(){
       if (c.status === "aguardando_confirmacao") {
         seg.innerHTML = '<span style="font-size:.78rem;color:var(--ambar);font-weight:600">Na Fila de confirmação — confirme no Início</span>';
       } else {
-        const ativo = c.status === "paga" ? "paga" : (c.status === "realizada" || c.status === "faturada") ? "realizada" : "confirmada";
-        [["confirmada","Agendada"],["realizada","Realizada"],["paga","Paga"]].forEach(([st, rot]) => {
+        const ativo = c.status === "paga" ? "paga" : isRealizada(c.status) ? "realizada" : "nao";
+        [["nao","Não realizada"],["realizada","Realizada"],["paga","Paga"]].forEach(([st, rot]) => {
           const b = document.createElement("button");
           b.type = "button";
           b.textContent = rot;
@@ -2384,28 +2384,18 @@ async function carregarSituacao(){
 
 async function sitMudar(c, st, btn){
   if (btn.disabled) return;
-  btn.disabled = true; btn.textContent = "…";
   if (st === "paga") {
-    const saldo = Math.max(0, Number(c.valor_previsto || 0) - Number(c.total_pago || 0));
-    if (saldo > 0.009) {
-      const chave = (crypto.randomUUID ? crypto.randomUUID()
-        : Date.now() + "-" + Math.random().toString(36).slice(2));
-      const { error } = await sb.from("pagamentos").insert({
-        cirurgia_id: c.id, valor: saldo, data_pagamento: new Date().toISOString().slice(0, 10),
-        fonte: "conferencia", idempotency_key: chave
-      });
-      if (error && error.code !== "23505") { toast("Não foi possível registrar o pagamento: " + error.message, true); carregarSituacao(); return; }
-    }
-    await sb.from("cirurgias").update({ status: "paga" }).eq("id", c.id).neq("status", "paga");
-    toast(saldo > 0.009 ? "Recebimento de " + brl.format(saldo) + " registrado — marcada como Paga." : "Marcada como Paga.");
-  } else {
-    const upd = { status: st };
-    if (st === "realizada" && !c.data_realizacao)
-      upd.data_realizacao = String(c.data_cirurgia || new Date().toISOString()).slice(0, 10);
-    const { error } = await sb.from("cirurgias").update(upd).eq("id", c.id);
-    if (error) { toast("Não foi possível alterar: " + error.message, true); carregarSituacao(); return; }
-    toast(st === "confirmada" ? "Marcada como Agendada." : "Marcada como Realizada.");
+    pgAbrirQuitar(c, () => { carregarSituacao(); carregarTudo(); });
+    return;
   }
+  btn.disabled = true; btn.textContent = "…";
+  if (c.status === "paga") await pgDesfazer(c);
+  const upd = { status: st === "nao" ? "confirmada" : st };
+  if (st === "realizada" && !c.data_realizacao)
+    upd.data_realizacao = String(c.data_cirurgia || new Date().toISOString()).slice(0, 10);
+  const { error } = await sb.from("cirurgias").update(upd).eq("id", c.id);
+  if (error) { toast("Não foi possível alterar: " + error.message, true); carregarSituacao(); return; }
+  toast(st === "nao" ? "Marcada como Não realizada." : "Marcada como Realizada.");
   carregarSituacao();
   carregarTudo();
 }
