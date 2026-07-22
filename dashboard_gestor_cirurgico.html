@@ -2852,6 +2852,9 @@ function calChaveDia(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).p
 
 async function carregarCalendario(){
   const alvo = $("cal-corpo");
+  const calLoadTimer = setTimeout(() => {
+    alvo.innerHTML = '<div class="vazio">Carregando…</div>';
+  }, 250);
   let ini, fim;
   if (calModo === "mes") {
     const primeiro = new Date(calAncora.getFullYear(), calAncora.getMonth(), 1);
@@ -2877,6 +2880,7 @@ async function carregarCalendario(){
       .lt("data_cirurgia", fim.toISOString())
       .order("data_cirurgia", { ascending: true });
     if (error) throw error;
+    clearTimeout(calLoadTimer);
     const porDia = {};
     (cirurgias || []).forEach(c => {
       const k = calChaveDia(new Date(c.data_cirurgia));
@@ -2913,7 +2917,7 @@ async function carregarCalendario(){
           mais.textContent = "+" + (evs.length - 3);
           cel.appendChild(mais);
         }
-        cel.addEventListener("click", () => { calAncora = d; calDefinirModo("semana"); });
+        cel.addEventListener("click", () => { calAncora = d; calDefinirModo("dia"); });
         grade.appendChild(cel);
       }
       alvo.appendChild(grade);
@@ -2946,6 +2950,7 @@ async function carregarCalendario(){
       }
     }
   } catch (e) {
+    clearTimeout(calLoadTimer);
     alvo.innerHTML = '<div class="vazio">Calendário indisponível: ' + (e.message || e) + '</div>';
   }
 }
@@ -3630,11 +3635,33 @@ async function ctMontarEdicaoUI(container, r){
       return;
     }
     portesDiv.innerHTML = '<p style="font-size:.7rem;color:var(--cinza);margin:8px 0 4px">Valor (R$) de cada porte nessa tabela — preencha só os que usa:</p>' +
+      '<div class="ct-portes-auto"></div>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px">' +
       portes.map(p => '<label class="ct-campo"><span>' + escHtml(p) + '</span>' +
         '<input type="number" step="0.01" min="0" data-porte="' + escHtml(p) + '" value="' +
         (valores[p] != null ? Number(valores[p]) : "") + '" placeholder="—"></label>').join("") +
       '</div>';
+    // oferece preenchimento automático a partir de cbhpm_edicoes_portes (só se o formulário ainda estiver vazio)
+    const todosVazios = ![...portesDiv.querySelectorAll("[data-porte]")].some(inp => inp.value.trim() !== "");
+    if (todosVazios) {
+      const refPortes = await ctBuscarPortesEdicao(sel.value);
+      const autoDiv = portesDiv.querySelector(".ct-portes-auto");
+      if (refPortes && autoDiv) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn";
+        btn.style.cssText = "padding:6px 12px;font-size:.78rem;background:var(--verde-tinta);color:var(--titulo);margin-bottom:8px";
+        btn.textContent = "Usar valores da tabela " + refPortes.vigencia;
+        btn.addEventListener("click", () => {
+          portesDiv.querySelectorAll("[data-porte]").forEach(inp => {
+            if (inp.value.trim() !== "") return;
+            const v = refPortes.mapa[inp.dataset.porte];
+            if (v != null) inp.value = Number(v);
+          });
+        });
+        autoDiv.appendChild(btn);
+      }
+    }
   };
   sel.addEventListener("change", render);
   await render();
@@ -3907,6 +3934,10 @@ async function ppCriar(){
 /* busca unificada: catálogo oficial + próprios (para agendamento e composição) */
 /* ---------- MODO CONSULTA (free / teste encerrado): só consulta às tabelas ---------- */
 function modoConsulta(linkPagamento){
+  window.consultaFree = true;
+  ctEdicoesCarregadas = true; // trava a população de edições antigas no free
+  const selEdFree = document.getElementById("ct-edicao");
+  if (selEdFree) selEdFree.innerHTML = '<option value="2022">CBHPM 2022 (atual) + SUS</option>';
   if (document.getElementById("mc-overlay")) return;
   const ov = document.createElement("div");
   ov.id = "mc-overlay";
@@ -3966,7 +3997,7 @@ document.getElementById("ct-busca")?.addEventListener("input", () => {
 document.getElementById("ct-edicao")?.addEventListener("change", consultarTabelas);
 let ctEdicaoRotulos = {};
 async function ctPopularEdicoes(){
-  if (ctEdicoesCarregadas) return;
+  if (ctEdicoesCarregadas || window.consultaFree) return;
   ctEdicoesCarregadas = true;
   const sel = document.getElementById("ct-edicao");
   if (!sel) return;
@@ -4053,6 +4084,21 @@ async function consultarTabelas(){
     '<p style="font-size:.75rem;color:var(--cinza);margin-top:8px">Valores de referência (CBHPM/SUS) — não substituem a tabela contratual de cada convênio.' +
     (edicao === "todas" ? ' Edições antigas mostram porte (o valor em R$ depende do valor de porte de cada convênio).' : '') + '</p>';
 }
+let ctPortesCache = {}; // edicao -> { vigencia, mapa: { porte: valor_reais } } | null (sem valores)
+async function ctBuscarPortesEdicao(edicao){
+  if (Object.prototype.hasOwnProperty.call(ctPortesCache, edicao)) return ctPortesCache[edicao];
+  const { data, error } = await sb.from("cbhpm_edicoes_portes")
+    .select("vigencia,porte,valor_reais")
+    .eq("edicao", edicao)
+    .order("vigencia", { ascending: false });
+  if (error || !data || !data.length) { ctPortesCache[edicao] = null; return null; }
+  const vigencia = data[0].vigencia;
+  const mapa = {};
+  data.filter(r => r.vigencia === vigencia).forEach(r => { mapa[r.porte] = r.valor_reais; });
+  const res = { vigencia, mapa };
+  ctPortesCache[edicao] = res;
+  return res;
+}
 async function consultarEdicaoAntiga(edicao, termo, alvo, conta){
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
   const t = termo.replace(/[%,()]/g, "");
@@ -4078,18 +4124,24 @@ async function consultarEdicaoAntiga(edicao, termo, alvo, conta){
   if (error) { alvo.innerHTML = '<p style="color:var(--vermelho);font-size:.85rem">Erro: ' + esc(error.message) + '</p>'; return; }
   if (!data || !data.length) { alvo.innerHTML = '<p style="color:var(--cinza);font-size:.85rem">Nada encontrado para "' + esc(termo) + '".</p>'; conta.textContent = "0"; return; }
   conta.textContent = String(data.length);
-  let html = '<table class="ct-tab">' +
-    '<tr><th>Código</th><th>Procedimento</th><th>Porte</th><th>UCO</th><th>Aux.</th></tr>';
+  const portes = await ctBuscarPortesEdicao(edicao);
+  const temValores = !!portes;
+  let html = (temValores ? '<p style="font-size:.75rem;color:var(--cinza);margin-bottom:6px">Valores de referência da vigência ' + esc(portes.vigencia) + ' (Comunicado AMB).</p>' : '') +
+    '<table class="ct-tab">' +
+    '<tr><th>Código</th><th>Procedimento</th><th>Porte</th><th>UCO</th><th>Aux.</th>' + (temValores ? '<th style="text-align:right">Valor (R$)</th>' : '') + '</tr>';
   data.forEach(p => {
+    const valorR = temValores ? portes.mapa[p.porte] : undefined;
     html += '<tr>' +
       '<td class="ct-cod">' + esc(p.codigo_fmt) + '</td>' +
       '<td class="ct-nome">' + esc(p.nome) + '</td>' +
       '<td>' + esc(p.porte || "—") + (p.porte_anestesico ? ' <span style="color:var(--cinza)">(anest. ' + esc(p.porte_anestesico) + ')</span>' : '') + '</td>' +
       '<td>' + (p.uco != null ? esc(p.uco) : "—") + '</td>' +
-      '<td>' + (p.n_auxiliares ?? "—") + '</td></tr>';
+      '<td>' + (p.n_auxiliares ?? "—") + '</td>' +
+      (temValores ? '<td class="ct-valor" style="text-align:right">' + (valorR != null ? brl.format(Number(valorR)) : "—") + '</td>' : '') +
+      '</tr>';
   });
   alvo.innerHTML = html + '</table>' +
-    '<p style="font-size:.75rem;color:var(--cinza);margin-top:8px">Edições antigas mostram porte e UCO — o valor em R$ depende do valor de porte de cada convênio (configure em Meus contratos). Tabelas CBHPM © AMB.</p>';
+    '<p style="font-size:.75rem;color:var(--cinza);margin-top:8px">Edições antigas mostram porte e UCO' + (temValores ? '' : ' — o valor em R$ depende do valor de porte de cada convênio (configure em Meus contratos)') + '. Tabelas CBHPM © AMB.</p>';
 }
 
 /* ---------- ditado por áudio (preenche o formulário; nada grava sem o Lançar) ---------- */
