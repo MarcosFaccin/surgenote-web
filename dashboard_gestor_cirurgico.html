@@ -1150,6 +1150,24 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
   </div>
 </div>
 
+<!-- mini-modal: marcar como Paga (valor recebido opcional) -->
+<div id="pg-fundo" class="modal-fundo" hidden>
+  <div class="modal" role="dialog" aria-label="Registrar recebimento" style="max-width:340px">
+    <h3 style="margin-bottom:4px">Marcar como Paga</h3>
+    <p id="pg-sub" style="font-size:.8rem;color:var(--cinza);margin-bottom:10px"></p>
+    <label class="campo"><span>Valor recebido (ajuste se for diferente)</span>
+      <input type="number" id="pg-valor" class="sel-status" min="0" step="0.01" style="width:100%;padding:10px;font-size:16px">
+    </label>
+    <label class="campo"><span>Data</span>
+      <input type="date" id="pg-data" class="sel-status" style="width:100%;padding:10px;font-size:16px">
+    </label>
+    <div class="acoes" style="margin-top:12px">
+      <button class="btn btn-confirmar" id="pg-ok">Confirmar</button>
+      <button class="btn btn-recusar" id="pg-cancelar" type="button">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div id="bio-trava" class="bio-trava" hidden>
   <div class="bio-cartao">
     <img src="icon-192.png" alt="SurgeNote">
@@ -1632,6 +1650,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("dt-fechar").addEventListener("click", () => { $("detalhe-fundo").hidden = true; });
   $("detalhe-fundo").addEventListener("click", (e) => { if (e.target.id === "detalhe-fundo") $("detalhe-fundo").hidden = true; });
   $("dt-pg-salvar").addEventListener("click", dtRegistrarPagamento);
+  $("pg-ok").addEventListener("click", pgConfirmar);
+  $("pg-cancelar").addEventListener("click", () => { $("pg-fundo").hidden = true; });
   $("dt-add-btn").addEventListener("click", dtIncluirItem);
   $("dt-recalcular").addEventListener("click", dtRecalcular);
   $("dt-add-proc").addEventListener("input", () => { clearTimeout(dtProcTimer); dtProcTimer = setTimeout(dtSugerirProc, 300); });
@@ -2379,6 +2399,45 @@ async function sitMudar(c, st, btn){
   }
   carregarSituacao();
   carregarTudo();
+}
+
+/* ---------- quitação compartilhada (botão Paga sem valor no rótulo) ---------- */
+let pgAlvo = null, pgDepois = null;
+function pgAbrirQuitar(c, aoConcluir){
+  pgAlvo = c; pgDepois = aoConcluir || null;
+  const saldo = Math.max(0, Number(c.valor_previsto||0) - Number(c.total_pago||0));
+  $("pg-sub").textContent = (c.nome_procedimento || "Cirurgia") + (saldo > 0.009 ? " · saldo previsto " + brl.format(saldo) : "");
+  $("pg-valor").value = saldo > 0.009 ? saldo.toFixed(2) : "";
+  $("pg-data").value = new Date().toISOString().slice(0,10);
+  $("pg-fundo").hidden = false;
+}
+async function pgConfirmar(){
+  const btn = $("pg-ok");
+  if (btn.disabled || !pgAlvo) return;
+  const valor = Number($("pg-valor").value || 0);
+  const data = $("pg-data").value || new Date().toISOString().slice(0,10);
+  btn.disabled = true;
+  if (valor > 0.009) {
+    const chave = (crypto.randomUUID ? crypto.randomUUID() : Date.now()+"-"+Math.random().toString(36).slice(2));
+    const { error } = await sb.from("pagamentos").insert({
+      cirurgia_id: pgAlvo.id, valor, data_pagamento: data, fonte: "conferencia", idempotency_key: chave });
+    if (error && error.code !== "23505") {
+      btn.disabled = false; toast("Não foi possível registrar: " + error.message, true); return;
+    }
+  }
+  await sb.from("cirurgias").update({ status: "paga" }).eq("id", pgAlvo.id).neq("status","paga");
+  btn.disabled = false; $("pg-fundo").hidden = true;
+  toast(valor > 0.009 ? "Recebimento de " + brl.format(valor) + " registrado — marcada como Paga." : "Marcada como Paga.");
+  if (pgDepois) pgDepois();
+}
+async function pgDesfazer(c, aoConcluir){
+  const { data: ult } = await sb.from("pagamentos").select("id")
+    .eq("cirurgia_id", c.id).eq("fonte","conferencia")
+    .order("created_at", { ascending:false }).limit(1);
+  if (ult && ult.length) await sb.from("pagamentos").delete().eq("id", ult[0].id);
+  await sb.from("cirurgias").update({ status: "realizada" }).eq("id", c.id);
+  toast("Pagamento desfeito — cirurgia reaberta.");
+  if (aoConcluir) aoConcluir();
 }
 
 async function relMarcarPago(c, saldo, btn){
