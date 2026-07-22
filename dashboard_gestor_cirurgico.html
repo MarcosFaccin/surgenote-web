@@ -388,15 +388,6 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .dt-sub{font-size:.78rem;color:var(--cinza)}
 .modal-fechar{background:none;border:none;font-size:1.1rem;color:var(--cinza);padding:2px 6px}
 .modal-corpo{padding:16px 18px;overflow-y:auto}
-.linha-tempo{position:relative;margin:0 0 18px;padding-left:22px}
-.linha-tempo::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--linha)}
-.lt-item{position:relative;padding:0 0 14px}
-.lt-item::before{content:"";position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--verde);border:2px solid var(--branco)}
-.lt-item.lt-alerta::before{background:var(--vermelho)}
-.lt-item.lt-dinheiro::before{background:#3FBF8F}
-.lt-item .lt-quando{font-size:.72rem;color:var(--cinza);font-family:var(--mono)}
-.lt-item .lt-oq{font-size:.9rem;font-weight:600}
-.lt-item .lt-extra{font-size:.8rem;color:var(--cinza)}
 .dt-composicao{border-top:1px solid var(--linha);padding:12px 0 14px}
 .dt-item{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:.85rem;border-bottom:1px dashed var(--linha)}
 .dt-item .nm{flex:1;min-width:0}
@@ -1112,7 +1103,26 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
       <button class="modal-fechar" id="dt-fechar" aria-label="Fechar">✕</button>
     </div>
     <div class="modal-corpo">
-      <div id="dt-linha-tempo" class="linha-tempo"></div>
+      <div class="dt-status" style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 14px">
+        <div>
+          <span class="ap-rotulo">Situação</span>
+          <div class="sit-seg" id="dt-sit-seg"></div>
+        </div>
+        <div>
+          <span class="ap-rotulo">Pagamento</span>
+          <div class="sit-seg" id="dt-pg-seg"></div>
+        </div>
+      </div>
+      <div id="dt-resumo" style="font-size:.82rem;color:var(--cinza);margin-bottom:10px"></div>
+      <div class="campo">
+        <span>Observações (OPME, equipamentos — até 500 caracteres)</span>
+        <textarea id="dt-obs" maxlength="500" rows="3" class="sel-status"
+          style="width:100%;padding:10px;font-size:16px;resize:vertical"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+          <span id="dt-obs-conta" style="font-size:.72rem;color:var(--cinza)"></span>
+          <button class="btn btn-confirmar" id="dt-obs-salvar" style="padding:6px 14px;font-size:.8rem">Salvar observações</button>
+        </div>
+      </div>
 
       <div class="dt-composicao">
         <span class="ap-rotulo">Composição do honorário (contrato)</span>
@@ -1137,15 +1147,6 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
         <div id="dt-memoria" style="font-size:.8rem;color:var(--cinza);margin-top:8px;white-space:pre-line"></div>
       </div>
 
-      <div class="dt-pagamento">
-        <span class="ap-rotulo">Registrar pagamento recebido</span>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <input type="number" id="dt-pg-valor" class="sel-status" min="0" step="0.01" placeholder="R$ valor" style="flex:1;min-width:110px;padding:10px;font-size:16px">
-          <input type="date" id="dt-pg-data" class="sel-status" style="padding:10px;font-size:16px">
-          <button class="btn btn-confirmar" id="dt-pg-salvar">Registrar</button>
-        </div>
-        <p style="font-size:.72rem;color:var(--cinza);margin-top:8px">Se o total pago cobrir o previsto, a cirurgia é marcada como Paga automaticamente.</p>
-      </div>
     </div>
   </div>
 </div>
@@ -1221,6 +1222,8 @@ const ROTULOS = {
   faturada: "Faturada", paga: "Paga", glosada: "Glosada", cancelada: "Cancelada"
 };
 const ORDEM_STATUS = ["aguardando_confirmacao","confirmada","realizada","faturada","paga","glosada","cancelada"];
+const ROTULOS_SIMPLES = { aguardando_confirmacao: "Na Fila", confirmada: "Não realizada", agendada: "Não realizada", realizada: "Realizada", faturada: "Realizada", paga: "Paga", glosada: "Realizada", cancelada: "Cancelada" };
+const isRealizada = s => ["realizada","faturada","paga","glosada"].includes(s);
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const $ = (id) => document.getElementById(id);
 let sb = null, recemChegadas = new Set();
@@ -1649,7 +1652,13 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("ag-add-outro").addEventListener("click", () => addOutroProc("ag-proc", agItens, "ag-chips"));
   $("dt-fechar").addEventListener("click", () => { $("detalhe-fundo").hidden = true; });
   $("detalhe-fundo").addEventListener("click", (e) => { if (e.target.id === "detalhe-fundo") $("detalhe-fundo").hidden = true; });
-  $("dt-pg-salvar").addEventListener("click", dtRegistrarPagamento);
+  $("dt-obs").addEventListener("input", () => { $("dt-obs-conta").textContent = $("dt-obs").value.length + "/500"; });
+  $("dt-obs-salvar").addEventListener("click", async () => {
+    if (!dtCirurgia) return;
+    const { error } = await sb.from("cirurgias").update({ observacoes: $("dt-obs").value.trim() || null }).eq("id", dtCirurgia.id);
+    if (error) { toast("Não foi possível salvar: " + error.message, true); return; }
+    toast("Observações salvas.");
+  });
   $("pg-ok").addEventListener("click", pgConfirmar);
   $("pg-cancelar").addEventListener("click", () => { $("pg-fundo").hidden = true; });
   $("dt-add-btn").addEventListener("click", dtIncluirItem);
@@ -3305,80 +3314,59 @@ async function mvListar(){
   data.forEach(p => alvo.appendChild(mvLinhaHtml(p, true)));
 }
 
-/* ---------- detalhe da cirurgia (linha do tempo + pagamento) ---------- */
+/* ---------- detalhe da cirurgia (situação, pagamento e observações) ---------- */
 let dtCirurgia = null;
 
 async function abrirDetalhe(cirurgiaId){
   const { data: c } = await sb.from("vw_cirurgias_completa").select("*").eq("id", cirurgiaId).maybeSingle();
   if (!c) { toast("Cirurgia não encontrada.", true); return; }
   dtCirurgia = c;
-  const [pgs, gls] = await Promise.all([
-    sb.from("pagamentos").select("valor,data_pagamento,fonte,created_at").eq("cirurgia_id", c.id).order("data_pagamento"),
-    sb.from("glosas").select("valor_glosado,motivo,status,data_identificacao").eq("cirurgia_id", c.id)
-  ]);
   $("dt-titulo").textContent = c.nome_procedimento || "Cirurgia";
   $("dt-sub").textContent = "Nº " + (c.protocolo || "—") + " · " + (c.paciente_nome || "paciente n/d") +
     " · " + (c.convenio_ref || c.convenio_nome || "sem convênio");
 
-  const eventos = [];
-  const dfmt = (d, hora) => d ? fmtData(d, hora) : null;
-  eventos.push({ q: dfmt(c.created_at, true), o: "Registrada", e: "via " + (String(c.protocolo||"").startsWith("AG-") ? "dashboard" : "WhatsApp") });
-  if (c.data_cirurgia) eventos.push({ q: dfmt(c.data_cirurgia, true), o: "Agendada/confirmada", e: c.hospital_ref || c.hospital_nome || "" });
-  if (c.data_realizacao) eventos.push({ q: dfmt(c.data_realizacao, false), o: "Realizada", e: "valor previsto " + brl.format(Number(c.valor_previsto||0)) });
-  if (c.faturada_em) eventos.push({ q: dfmt(c.faturada_em, false), o: "Faturada", e: "" });
-  (pgs.data || []).forEach(p => eventos.push({ q: dfmt(p.data_pagamento, false), o: "Pagamento recebido " + brl.format(Number(p.valor||0)), e: p.fonte || "", cls: "lt-dinheiro" }));
-  (gls.data || []).forEach(g => eventos.push({ q: dfmt(g.data_identificacao, false), o: "Glosa " + brl.format(Number(g.valor_glosado||0)) + " (" + g.status + ")", e: g.motivo || "", cls: "lt-alerta" }));
-  if (c.status === "cancelada") eventos.push({ q: dfmt(c.updated_at, true), o: "Cancelada", e: "", cls: "lt-alerta" });
-
   const saldo = Math.max(0, Number(c.valor_previsto||0) - Number(c.total_pago||0));
-  eventos.push({ q: "hoje", o: "Status: " + (ROTULOS[c.status] || c.status), e: saldo > 0 ? "saldo em aberto " + brl.format(saldo) : "quitada", cls: saldo > 0 ? "lt-alerta" : "lt-dinheiro" });
-
-  $("dt-linha-tempo").innerHTML = eventos.map(ev =>
-    '<div class="lt-item ' + (ev.cls || "") + '"><div class="lt-quando">' + escHtml(ev.q || "—") + '</div><div class="lt-oq">' + escHtml(ev.o) + '</div>' + (ev.e ? '<div class="lt-extra">' + escHtml(ev.e) + '</div>' : "") + '</div>'
-  ).join("");
-  $("dt-pg-valor").value = saldo > 0 ? saldo.toFixed(2) : "";
-  $("dt-pg-data").value = new Date().toISOString().slice(0,10);
+  // Situação: Não realizada | Realizada
+  const sitSeg = $("dt-sit-seg"); sitSeg.innerHTML = "";
+  const sitAtivo = isRealizada(c.status) ? "realizada" : "nao";
+  [["nao","Não realizada"],["realizada","Realizada"]].forEach(([k, rot]) => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = rot;
+    if (k === sitAtivo) b.classList.add("ativo");
+    else b.addEventListener("click", async () => {
+      const upd = k === "realizada"
+        ? { status: "realizada", data_realizacao: c.data_realizacao || String(c.data_cirurgia || new Date().toISOString()).slice(0,10) }
+        : { status: "confirmada" };
+      const { error } = await sb.from("cirurgias").update(upd).eq("id", c.id);
+      if (error) { toast("Não foi possível alterar: " + error.message, true); return; }
+      toast(k === "realizada" ? "Marcada como Realizada." : "Marcada como Não realizada.");
+      abrirDetalhe(c.id); carregarTudo();
+    });
+    sitSeg.appendChild(b);
+  });
+  // Pagamento: Em aberto | Paga
+  const pgSeg = $("dt-pg-seg"); pgSeg.innerHTML = "";
+  const pago = c.status === "paga";
+  [["aberto","Em aberto"],["paga","Paga"]].forEach(([k, rot]) => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = rot;
+    if ((k === "paga") === pago) b.classList.add("ativo");
+    else b.addEventListener("click", () => {
+      b.disabled = true;
+      if (k === "paga") pgAbrirQuitar(c, () => { abrirDetalhe(c.id); carregarTudo(); });
+      else pgDesfazer(c, () => { abrirDetalhe(c.id); carregarTudo(); });
+    });
+    pgSeg.appendChild(b);
+  });
+  $("dt-resumo").textContent =
+    "Previsto " + brl.format(Number(c.valor_previsto||0)) +
+    " · pago " + brl.format(Number(c.total_pago||0)) +
+    (saldo > 0.009 ? " · em aberto " + brl.format(saldo) : " · quitada") +
+    (c.data_cirurgia ? " · " + fmtData(c.data_cirurgia, true) : "") +
+    (c.hospital_ref || c.hospital_nome ? " · " + (c.hospital_ref || c.hospital_nome) : "");
+  // observações
+  $("dt-obs").value = c.observacoes || "";
+  $("dt-obs-conta").textContent = ($("dt-obs").value.length) + "/500";
   $("detalhe-fundo").hidden = false;
   dtCarregarComposicao();
-}
-
-async function dtRegistrarPagamento(){
-  if (!dtCirurgia) return;
-  const valor = Number($("dt-pg-valor").value);
-  const data = $("dt-pg-data").value;
-  if (!valor || valor <= 0 || !data) { toast("Informe valor e data do pagamento.", true); return; }
-  const btn = $("dt-pg-salvar");
-  if (btn.disabled) return;              // trava reentrada (duplo-clique)
-  btn.disabled = true;
-  // chave idempotente por clique: reenvio do MESMO pagamento colide na UNIQUE
-  const chave = (crypto.randomUUID ? crypto.randomUUID()
-    : Date.now() + "-" + Math.random().toString(36).slice(2));
-  const { error } = await sb.from("pagamentos").insert({
-    cirurgia_id: dtCirurgia.id, valor: valor, data_pagamento: data, fonte: "dashboard",
-    idempotency_key: chave
-  });
-  if (error) {
-    // 23505 = duplicata (reenvio do mesmo clique) → já foi registrado, trata como sucesso
-    if (error.code === "23505") {
-      toast("Pagamento já havia sido registrado.");
-    } else {
-      btn.disabled = false;
-      toast("Não foi possível registrar: " + error.message, true);
-      return;
-    }
-  } else {
-    const totalPago = Number(dtCirurgia.total_pago || 0) + valor;
-    if (totalPago >= Number(dtCirurgia.valor_previsto || 0) - 0.009 && dtCirurgia.status !== "paga") {
-      // update condicional: só quita se ainda não estiver paga (evita corrida)
-      await sb.from("cirurgias").update({ status: "paga" }).eq("id", dtCirurgia.id).neq("status", "paga");
-      toast("Pagamento registrado — cirurgia quitada e marcada como Paga.");
-    } else {
-      toast("Pagamento de " + brl.format(valor) + " registrado.");
-    }
-  }
-  btn.disabled = false;
-  abrirDetalhe(dtCirurgia.id);
-  carregarTudo();
 }
 
 /* ---------- composição do honorário (motor contratual) ---------- */
