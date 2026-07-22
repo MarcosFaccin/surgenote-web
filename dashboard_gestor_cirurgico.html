@@ -2420,9 +2420,11 @@ async function pgDesfazer(c, aoConcluir){
   const { data: ult } = await sb.from("pagamentos").select("id")
     .eq("cirurgia_id", c.id).eq("fonte","conferencia")
     .order("created_at", { ascending:false }).limit(1);
-  if (ult && ult.length) await sb.from("pagamentos").delete().eq("id", ult[0].id);
+  const temConferencia = !!(ult && ult.length);
+  if (temConferencia) await sb.from("pagamentos").delete().eq("id", ult[0].id);
   await sb.from("cirurgias").update({ status: "realizada" }).eq("id", c.id);
-  toast("Pagamento desfeito — cirurgia reaberta.");
+  toast(temConferencia ? "Pagamento desfeito — cirurgia reaberta."
+    : "Cirurgia reaberta. Há pagamento registrado por outra origem — confira no Financeiro.");
   if (aoConcluir) aoConcluir();
 }
 
@@ -2779,8 +2781,7 @@ async function criarCirurgiaDash(cfg){
     urgencia: urgente,
     papel_medico: papel,
     status: futura ? "confirmada" : "aguardando_confirmacao",
-    protocolo: (futura ? "AG-" : "MN-") + Date.now().toString(36).toUpperCase(),
-    observacoes: futura ? "Agendado pelo dashboard" : "Lançado manualmente pelo dashboard"
+    protocolo: (futura ? "AG-" : "MN-") + Date.now().toString(36).toUpperCase()
   }).select("id").single();
   if (error) { btn.disabled = false; btn.textContent = rotulo; toast("Não foi possível salvar: " + error.message, true); return false; }
   if (itens.length > 1 || urgente || papel !== "cirurgiao") await gravarComposicao(nova.id, itens);
@@ -3287,10 +3288,16 @@ async function abrirDetalhe(cirurgiaId){
     " · " + (c.convenio_ref || c.convenio_nome || "sem convênio");
 
   const saldo = Math.max(0, Number(c.valor_previsto||0) - Number(c.total_pago||0));
+  // Na Fila ou cancelada: sem toggles (a Fila é o caminho; cancelada não ressuscita aqui)
+  const bloqueada = c.status === "aguardando_confirmacao" || c.status === "cancelada";
   // Situação: Não realizada | Realizada
   const sitSeg = $("dt-sit-seg"); sitSeg.innerHTML = "";
-  const sitAtivo = isRealizada(c.status) ? "realizada" : "nao";
-  [["nao","Não realizada"],["realizada","Realizada"]].forEach(([k, rot]) => {
+  if (bloqueada) {
+    sitSeg.innerHTML = '<span style="font-size:.78rem;color:var(--ambar);font-weight:600">' +
+      (c.status === "cancelada" ? "Cirurgia cancelada" : "Na Fila de confirmação — confirme no Início") + '</span>';
+    $("dt-pg-seg").innerHTML = "";
+  }
+  if (!bloqueada) [["nao","Não realizada"],["realizada","Realizada"]].forEach(([k, rot]) => {
     const b = document.createElement("button"); b.type = "button"; b.textContent = rot;
     if (k === sitAtivo) b.classList.add("ativo");
     else b.addEventListener("click", async () => {
@@ -3307,9 +3314,10 @@ async function abrirDetalhe(cirurgiaId){
     sitSeg.appendChild(b);
   });
   // Pagamento: Em aberto | Paga
-  const pgSeg = $("dt-pg-seg"); pgSeg.innerHTML = "";
+  const pgSeg = $("dt-pg-seg");
+  if (!bloqueada) pgSeg.innerHTML = "";
   const pago = c.status === "paga";
-  [["aberto","Em aberto"],["paga","Paga"]].forEach(([k, rot]) => {
+  if (!bloqueada) [["aberto","Em aberto"],["paga","Paga"]].forEach(([k, rot]) => {
     const b = document.createElement("button"); b.type = "button"; b.textContent = rot;
     if ((k === "paga") === pago) b.classList.add("ativo");
     else b.addEventListener("click", () => {
@@ -3330,8 +3338,9 @@ async function abrirDetalhe(cirurgiaId){
     (saldo > 0.009 ? " · em aberto " + brl.format(saldo) : " · quitada") +
     (c.data_cirurgia ? " · " + fmtData(c.data_cirurgia, true) : "") +
     (c.hospital_ref || c.hospital_nome ? " · " + (c.hospital_ref || c.hospital_nome) : "");
-  // observações
-  $("dt-obs").value = c.observacoes || "";
+  // observações (esconde marcadores internos legados de lançamentos antigos)
+  const obsLegada = c.observacoes === "Agendado pelo dashboard" || c.observacoes === "Lançado manualmente pelo dashboard";
+  $("dt-obs").value = obsLegada ? "" : (c.observacoes || "");
   $("dt-obs-conta").textContent = ($("dt-obs").value.length) + "/500";
   $("detalhe-fundo").hidden = false;
   dtCarregarComposicao();
