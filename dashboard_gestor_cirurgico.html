@@ -889,7 +889,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
               <label class="campo" style="margin:0"><span>De *</span><input type="date" id="rel-ini"></label>
               <label class="campo" style="margin:0"><span>Até *</span><input type="date" id="rel-fim"></label>
               <label class="campo" style="margin:0"><span>Pagamento</span><select id="rel-pagamento" class="sel-status" style="width:100%;padding:11px 9px;font-size:.88rem"><option value="">Todas</option><option value="aberto">Em aberto</option><option value="pagas">Pagas</option></select></label>
-              <label class="campo" style="margin:0"><span>Situação</span><select id="rel-status" class="sel-status" style="width:100%;padding:11px 9px;font-size:.88rem"><option value="">Todas</option></select></label>
+              <label class="campo" style="margin:0"><span>Situação</span><select id="rel-status" class="sel-status" style="width:100%;padding:11px 9px;font-size:.88rem"><option value="">Todas</option><option value="realizada">Realizadas</option><option value="nao_realizada">Não realizadas</option></select></label>
               <label class="campo" style="margin:0"><span>Convênio</span><select id="rel-convenio" class="sel-status" style="width:100%;padding:11px 9px;font-size:.88rem"><option value="">Todos</option></select></label>
               <label class="campo" style="margin:0"><span>Hospital</span><select id="rel-hospital" class="sel-status" style="width:100%;padding:11px 9px;font-size:.88rem"><option value="">Todos</option></select></label>
             </div>
@@ -1615,11 +1615,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   const atras = new Date(); atras.setDate(atras.getDate() - 120);
   $("rel-fim").value = hoje.toISOString().slice(0, 10);
   $("rel-ini").value = atras.toISOString().slice(0, 10);
-  ORDEM_STATUS.filter(st => st !== "cancelada").forEach(st => {
-    const op = document.createElement("option");
-    op.value = st; op.textContent = ROTULOS[st];
-    $("rel-status").appendChild(op);
-  });
   $("btn-rel-tela").addEventListener("click", relConferir);
   $("cal-modo-mes").addEventListener("click", () => calDefinirModo("mes"));
   $("cal-modo-semana").addEventListener("click", () => calDefinirModo("semana"));
@@ -2235,7 +2230,7 @@ function renderPipeline(mes){
 function renderRecentes(linhas){
   const alvo = $("recentes");
   if (!linhas.length) {
-    alvo.innerHTML = '<div class="vazio">As cirurgias confirmadas e o histórico aparecem aqui.</div>';
+    alvo.innerHTML = '<div class="vazio">As cirurgias agendadas e o histórico aparecem aqui.</div>';
     return;
   }
   alvo.innerHTML = "";
@@ -2244,22 +2239,13 @@ function renderRecentes(linhas){
     item.className = "recente";
     item.innerHTML =
       '<div class="info" style="cursor:pointer" title="Ver linha do tempo"><div class="nome"></div><div class="sub"></div></div>' +
-      '<span class="badge"></span>' +
-      '<select class="sel-status" aria-label="Mudar status"></select>';
+      '<span class="badge"></span>';
     item.querySelector(".info").addEventListener("click", () => abrirDetalhe(c.id));
     item.querySelector(".nome").textContent = c.nome_procedimento || "—";
     item.querySelector(".sub").textContent = (c.protocolo ? "Nº " + c.protocolo + " · " : "") + (c.convenio_ref || c.convenio_nome || "convênio n/d") + (c.hospital_ref || c.hospital_nome ? " · " + (c.hospital_ref || c.hospital_nome) : "") + " · " + fmtData(c.data_realizacao || c.data_cirurgia, false);
     const badge = item.querySelector(".badge");
-    badge.textContent = ROTULOS[c.status] || c.status;
+    badge.textContent = ROTULOS_SIMPLES[c.status] || c.status;
     badge.classList.add("st-" + c.status);
-    const sel = item.querySelector(".sel-status");
-    ORDEM_STATUS.forEach((s) => {
-      const op = document.createElement("option");
-      op.value = s; op.textContent = ROTULOS[s];
-      if (s === c.status) op.selected = true;
-      sel.appendChild(op);
-    });
-    sel.addEventListener("change", () => mudarStatus(c, sel.value, "Status atualizado para " + ROTULOS[sel.value]));
     alvo.appendChild(item);
   });
 }
@@ -2283,7 +2269,8 @@ async function buscarLinhasRelatorio(){
     if (!d || d < ini || d > fim) return false;
     if (conv && (c.convenio_ref || c.convenio_nome || "") !== conv) return false;
     if (hosp && (c.hospital_ref || c.hospital_nome || "") !== hosp) return false;
-    if (st && c.status !== st) return false;
+    if (st === "realizada" && !isRealizada(c.status)) return false;
+    if (st === "nao_realizada" && isRealizada(c.status)) return false;
     const saldo = Number(c.valor_previsto || 0) - Number(c.total_pago || 0);
     if (pg === "aberto" && !(saldo > 0.009 && c.status !== "paga")) return false;
     if (pg === "pagas" && !(c.status === "paga" || saldo <= 0.009)) return false;
@@ -2320,12 +2307,12 @@ async function relConferir(){
       (saldo > 0.009 ? " · em aberto " + brl.format(saldo) : "");
     item.querySelector(".info").addEventListener("click", () => abrirDetalhe(c.id));
     const badge = item.querySelector(".badge");
-    badge.textContent = ROTULOS[c.status] || c.status;
+    badge.textContent = ROTULOS_SIMPLES[c.status] || c.status;
     badge.classList.add("st-" + c.status);
     const btn = item.querySelector(".rc-pagar");
     if (btn) {
-      btn.textContent = "✓ Recebi " + brl.format(saldo);
-      btn.addEventListener("click", () => relMarcarPago(c, saldo, btn));
+      btn.textContent = "Paga";
+      btn.addEventListener("click", () => pgAbrirQuitar(c, relConferir));
     }
     alvo.appendChild(item);
   });
@@ -2439,22 +2426,6 @@ async function pgDesfazer(c, aoConcluir){
   if (aoConcluir) aoConcluir();
 }
 
-async function relMarcarPago(c, saldo, btn){
-  if (btn.disabled) return;
-  btn.disabled = true; btn.textContent = "Registrando…";
-  const chave = (crypto.randomUUID ? crypto.randomUUID()
-    : Date.now() + "-" + Math.random().toString(36).slice(2));
-  const { error } = await sb.from("pagamentos").insert({
-    cirurgia_id: c.id, valor: saldo, data_pagamento: new Date().toISOString().slice(0, 10),
-    fonte: "conferencia", idempotency_key: chave
-  });
-  if (error && error.code !== "23505") { toast("Não foi possível registrar: " + error.message, true); btn.disabled = false; btn.textContent = "✓ Recebi " + brl.format(saldo); return; }
-  await sb.from("cirurgias").update({ status: "paga" }).eq("id", c.id).neq("status", "paga");
-  toast(error && error.code === "23505" ? "Recebimento já registrado." : "Recebimento de " + brl.format(saldo) + " registrado — marcada como Paga.");
-  relConferir();
-  carregarTudo();
-}
-
 function popularFiltrosRelatorio(cirurgias){
   const povoar = (id, valores) => {
     const sel = $(id);
@@ -2479,7 +2450,7 @@ async function gerarRelatorioPDF(){
   const totPago = linhas.reduce((s,c) => s + Number(c.total_pago || c.valor_pago || 0), 0);
   const filtros = [];
   if ($("rel-pagamento").value) filtros.push("Pagamento: " + $("rel-pagamento").options[$("rel-pagamento").selectedIndex].text);
-  if ($("rel-status").value) filtros.push("Situação: " + (ROTULOS[$("rel-status").value] || $("rel-status").value));
+  if ($("rel-status").value) filtros.push("Situação: " + $("rel-status").options[$("rel-status").selectedIndex].text);
   if ($("rel-convenio").value) filtros.push("Convênio: " + $("rel-convenio").value);
   if ($("rel-hospital").value) filtros.push("Hospital: " + $("rel-hospital").value);
 
@@ -2492,7 +2463,7 @@ async function gerarRelatorioPDF(){
       "<td>" + escHtml(c.paciente_nome || "—") + (c.carteirinha ? "<br><small>cart. " + escHtml(c.carteirinha) + "</small>" : "") + "</td>" +
       "<td>" + escHtml(c.nome_procedimento || "—") + "</td>" +
       "<td>" + escHtml(c.convenio_ref || c.convenio_nome || "—") + "</td>" +
-      "<td>" + escHtml(ROTULOS[c.status] || c.status) + "</td>" +
+      "<td>" + escHtml(ROTULOS_SIMPLES[c.status] || c.status) + "</td>" +
       '<td style="text-align:right">' + brl.format(Number(c.valor_previsto || 0)) + "</td>" +
       '<td style="text-align:right">' + (saldo > 0.009 ? brl.format(saldo) : "—") + "</td>" +
     "</tr>";
@@ -2541,7 +2512,7 @@ async function gerarRelatorioCSV(){
     return [
       c.protocolo, dataRef(c), c.paciente_nome, c.carteirinha, c.nome_procedimento,
       c.hospital_ref || c.hospital_nome, c.convenio_ref || c.convenio_nome,
-      ROTULOS[c.status] || c.status,
+      ROTULOS_SIMPLES[c.status] || c.status,
       String(Number(c.valor_previsto || 0)).replace(".", ","),
       String(Number(c.total_pago || c.valor_pago || 0)).replace(".", ","),
       String(saldo).replace(".", ",")
