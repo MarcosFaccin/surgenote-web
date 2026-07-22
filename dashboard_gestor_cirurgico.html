@@ -3333,11 +3333,13 @@ async function abrirDetalhe(cirurgiaId){
     const b = document.createElement("button"); b.type = "button"; b.textContent = rot;
     if (k === sitAtivo) b.classList.add("ativo");
     else b.addEventListener("click", async () => {
+      if (b.disabled) return;
+      b.disabled = true;
       const upd = k === "realizada"
         ? { status: "realizada", data_realizacao: c.data_realizacao || String(c.data_cirurgia || new Date().toISOString()).slice(0,10) }
         : { status: "confirmada" };
       const { error } = await sb.from("cirurgias").update(upd).eq("id", c.id);
-      if (error) { toast("Não foi possível alterar: " + error.message, true); return; }
+      if (error) { b.disabled = false; toast("Não foi possível alterar: " + error.message, true); return; }
       toast(k === "realizada" ? "Marcada como Realizada." : "Marcada como Não realizada.");
       abrirDetalhe(c.id); carregarTudo();
     });
@@ -3350,9 +3352,14 @@ async function abrirDetalhe(cirurgiaId){
     const b = document.createElement("button"); b.type = "button"; b.textContent = rot;
     if ((k === "paga") === pago) b.classList.add("ativo");
     else b.addEventListener("click", () => {
-      b.disabled = true;
-      if (k === "paga") pgAbrirQuitar(c, () => { abrirDetalhe(c.id); carregarTudo(); });
-      else pgDesfazer(c, () => { abrirDetalhe(c.id); carregarTudo(); });
+      if (k === "paga") {
+        // não desabilita: o mini-modal tem trava própria e pode ser cancelado
+        pgAbrirQuitar(c, () => { abrirDetalhe(c.id); carregarTudo(); });
+      } else {
+        if (b.disabled) return;
+        b.disabled = true;
+        pgDesfazer(c, () => { abrirDetalhe(c.id); carregarTudo(); });
+      }
     });
     pgSeg.appendChild(b);
   });
