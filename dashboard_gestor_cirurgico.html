@@ -739,7 +739,7 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 
     <section class="kpis" aria-label="Indicadores do mês">
       <div class="kpi atencao"><div class="rotulo">Aguardando confirmação</div><div class="valor" id="kpi-fila">–</div><div class="sub">solicitações na fila</div></div>
-      <div class="kpi"><div class="rotulo">Cirurgias no mês</div><div class="valor" id="kpi-mes">–</div><div class="sub" id="kpi-mes-sub">registradas em <span id="mes-nome"></span></div></div>
+      <div class="kpi" id="kpi-mes-card" role="button" tabindex="0" style="cursor:pointer" title="Ver a lista de cirurgias do mês"><div class="rotulo">Cirurgias no mês ›</div><div class="valor" id="kpi-mes">–</div><div class="sub" id="kpi-mes-sub">registradas em <span id="mes-nome"></span> · toque para ver</div></div>
       <div class="kpi"><div class="rotulo">Valor previsto</div><div class="valor" id="kpi-previsto">–</div><div class="sub">soma do mês corrente</div></div>
       <div class="kpi"><div class="rotulo">Recebido no mês</div><div class="valor" id="kpi-recebido">–</div><div class="sub" id="kpi-recebido-sub">pagamentos lançados</div></div>
     </section>
@@ -859,6 +859,11 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
       <div class="painel-cab">
         <h2>Situação das cirurgias</h2>
         <span class="conta" id="sit-conta"></span>
+        <div style="margin-left:auto;display:flex;gap:4px;align-items:center">
+          <button type="button" class="recarregar" id="sit-ant" aria-label="Mês anterior">‹</button>
+          <b id="sit-mes" style="font-size:.82rem;min-width:96px;text-align:center;text-transform:capitalize"></b>
+          <button type="button" class="recarregar" id="sit-prox" aria-label="Próximo mês">›</button>
+        </div>
       </div>
       <div class="painel-corpo">
         <p style="font-size:.8rem;color:var(--cinza);margin-bottom:10px">Toque para mudar: <b>Não realizada · Realizada · Paga</b>. Ao marcar Paga, você confirma (ou ajusta) o valor recebido.</p>
@@ -1612,6 +1617,11 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("btn-reset-salvar").addEventListener("click", salvarNovaSenha);
   $("btn-sair").addEventListener("click", async () => { await sb.auth.signOut(); });
   $("btn-recarregar").addEventListener("click", carregarTudo);
+  $("sit-ant").addEventListener("click", () => { sitMesOff--; carregarSituacao(); });
+  $("sit-prox").addEventListener("click", () => { sitMesOff++; carregarSituacao(); });
+  const kpiMes = $("kpi-mes-card");
+  kpiMes.addEventListener("click", abrirSituacaoMes);
+  kpiMes.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrirSituacaoMes(); } });
   $("btn-rel-pdf").addEventListener("click", gerarRelatorioPDF);
   $("btn-rel-csv").addEventListener("click", gerarRelatorioCSV);
   const hoje = new Date();
@@ -2329,19 +2339,37 @@ async function relConferir(){
 }
 
 /* ---------- Situação das cirurgias (Financeiro): Não realizada · Realizada · Paga ---------- */
+/* Navegável por mês (pedido Dr. Augusto 23/07): sitMesOff = deslocamento em meses (0 = atual). */
+let sitMesOff = 0;
+function abrirSituacaoMes(){
+  sitMesOff = 0;
+  trocarView("financeiro");
+  trocarSub("financeiro", "situacao");
+  carregarSituacao();
+  const sec = document.querySelector('.v-sec[data-sub="situacao"]');
+  if (sec) sec.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 async function carregarSituacao(){
   const alvo = $("situacao");
   if (!alvo) return;
+  const base = new Date();
+  const ini = new Date(base.getFullYear(), base.getMonth() + sitMesOff, 1);
+  const fim = new Date(ini.getFullYear(), ini.getMonth() + 1, 1);
+  const rot = $("sit-mes");
+  if (rot) rot.textContent = ini.toLocaleString("pt-BR", { month: "long", year: "numeric" });
+  const iniISO = ini.toISOString(), fimISO = fim.toISOString();
   try {
     const { data, error } = await sb.from("vw_cirurgias_completa")
-      .select("id,nome_procedimento,paciente_nome,convenio_ref,convenio_nome,hospital_ref,hospital_nome,data_cirurgia,data_realizacao,status,valor_previsto,total_pago")
+      .select("id,nome_procedimento,paciente_nome,convenio_ref,convenio_nome,hospital_ref,hospital_nome,data_cirurgia,data_realizacao,status,valor_previsto,total_pago,created_at")
       .not("status", "in", "(cancelada,recusada)")
+      .or("and(data_cirurgia.gte." + iniISO + ",data_cirurgia.lt." + fimISO + "),and(data_cirurgia.is.null,created_at.gte." + iniISO + ",created_at.lt." + fimISO + ")")
+      .order("data_cirurgia", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .limit(40);
+      .limit(300);
     if (error) throw error;
     const linhas = data || [];
     $("sit-conta").textContent = linhas.length ? String(linhas.length) : "";
-    if (!linhas.length) { alvo.innerHTML = '<div class="vazio">Nenhuma cirurgia registrada ainda.</div>'; return; }
+    if (!linhas.length) { alvo.innerHTML = '<div class="vazio">Nenhuma cirurgia em ' + (rot ? rot.textContent : "neste mês") + '. Use ‹ › para navegar entre os meses.</div>'; return; }
     alvo.innerHTML = "";
     linhas.forEach(c => {
       const div = document.createElement("div");
