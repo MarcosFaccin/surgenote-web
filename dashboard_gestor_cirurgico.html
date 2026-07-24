@@ -2430,7 +2430,12 @@ async function sitMudar(c, st, btn){
 
 /* ---------- quitação compartilhada (botão Paga sem valor no rótulo) ---------- */
 let pgAlvo = null, pgDepois = null;
-function pgAbrirQuitar(c, aoConcluir){
+async function pgAbrirQuitar(c, aoConcluir){
+  // valores frescos: o Recalcular (via/apartamento/urgência) pode ter mudado o previsto
+  // depois que esta lista/detalhe foi montada — sem isso o modal abria com saldo velho
+  const { data: fresco } = await sb.from("vw_cirurgias_completa")
+    .select("valor_previsto,total_pago").eq("id", c.id).maybeSingle();
+  if (fresco) c = { ...c, ...fresco };
   pgAlvo = c; pgDepois = aoConcluir || null;
   const saldo = Math.max(0, Number(c.valor_previsto||0) - Number(c.total_pago||0));
   $("pg-sub").textContent = (c.nome_procedimento || "Cirurgia") + (saldo > 0.009 ? " · saldo previsto " + brl.format(saldo) : "");
@@ -3406,12 +3411,7 @@ async function abrirDetalhe(cirurgiaId){
     });
     pgSeg.appendChild(b);
   });
-  $("dt-resumo").textContent =
-    "Previsto " + brl.format(Number(c.valor_previsto||0)) +
-    " · pago " + brl.format(Number(c.total_pago||0)) +
-    (saldo > 0.009 ? " · em aberto " + brl.format(saldo) : " · quitada") +
-    (c.data_cirurgia ? " · " + fmtData(c.data_cirurgia, true) : "") +
-    (c.hospital_ref || c.hospital_nome ? " · " + (c.hospital_ref || c.hospital_nome) : "");
+  dtAtualizarResumo(c);
   // observações (esconde marcadores internos legados de lançamentos antigos)
   const obsLegada = c.observacoes === "Agendado pelo dashboard" || c.observacoes === "Lançado manualmente pelo dashboard";
   $("dt-obs").value = obsLegada ? "" : (c.observacoes || "");
@@ -3526,6 +3526,16 @@ async function dtIncluirItem(){
   dtCarregarComposicao();
 }
 
+function dtAtualizarResumo(c){
+  const saldo = Math.max(0, Number(c.valor_previsto||0) - Number(c.total_pago||0));
+  $("dt-resumo").textContent =
+    "Previsto " + brl.format(Number(c.valor_previsto||0)) +
+    " · pago " + brl.format(Number(c.total_pago||0)) +
+    (saldo > 0.009 ? " · em aberto " + brl.format(saldo) : " · quitada") +
+    (c.data_cirurgia ? " · " + fmtData(c.data_cirurgia, true) : "") +
+    (c.hospital_ref || c.hospital_nome ? " · " + (c.hospital_ref || c.hospital_nome) : "");
+}
+
 async function dtRecalcular(){
   await sb.from("cirurgias").update({
     urgencia: $("dt-urgencia").checked,
@@ -3551,7 +3561,7 @@ async function dtRecalcular(){
   $("dt-memoria").textContent = txt.replace(/\*/g, "");
   toast("Valor recalculado: " + brl.format(Number(m.total || 0)));
   const { data: c } = await sb.from("vw_cirurgias_completa").select("*").eq("id", dtCirurgia.id).maybeSingle();
-  if (c) dtCirurgia = c;
+  if (c) { dtCirurgia = c; dtAtualizarResumo(c); }
   dtCarregarComposicao();
   carregarTudo();
 }
