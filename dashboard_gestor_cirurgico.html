@@ -396,6 +396,13 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
 .dt-item .via.v-mesma{border:1px solid var(--linha);background:var(--papel);color:var(--cinza)}
 .dt-item .via.v-outra{border:1px solid var(--petroleo);background:var(--petroleo-tinta);color:var(--petroleo);font-weight:600}
 .dt-item .rm{background:none;border:none;color:var(--vermelho);font-size:.95rem;padding:0 4px}
+@media (max-width:640px){
+  /* celular: nome em linha própria; preço + via + remover na linha de baixo
+     (sem isso o nome era espremido a ~3px e o texto vazava por cima do preço) */
+  .dt-item{flex-wrap:wrap;row-gap:4px}
+  .dt-item .nm{flex:1 1 100%}
+  .dt-item .via{margin-left:auto}
+}
 .dt-pagamento{border-top:1px solid var(--linha);padding-top:14px}
 
 /* calendário da agenda (mês/semana) */
