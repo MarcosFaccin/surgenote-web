@@ -1128,6 +1128,18 @@ main{max-width:1240px;margin:0 auto;padding:16px 20px 48px}
         </div>
       </div>
       <div id="dt-resumo" style="font-size:.82rem;color:var(--cinza);margin-bottom:10px"></div>
+      <button class="btn" id="dt-editar-btn" type="button" style="background:var(--painel-2,rgba(127,127,127,.15));color:var(--titulo);padding:7px 14px;font-size:.82rem;margin-bottom:10px">✏️ Editar dados</button>
+      <div id="dt-edit" hidden style="border:1px solid var(--linha);border-radius:10px;padding:12px;margin-bottom:12px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
+          <label class="campo" style="margin:0"><span>Paciente</span><input id="dt-ed-pac" class="sel-status" style="width:100%;padding:9px;font-size:16px"></label>
+          <label class="campo" style="margin:0"><span>Data e hora</span><input id="dt-ed-data" type="datetime-local" class="sel-status" style="width:100%;padding:9px;font-size:16px"></label>
+          <label class="campo" style="margin:0"><span>Hospital</span><input id="dt-ed-hosp" class="sel-status" style="width:100%;padding:9px;font-size:16px"></label>
+          <label class="campo" style="margin:0"><span>Convênio</span><input id="dt-ed-conv" class="sel-status" style="width:100%;padding:9px;font-size:16px"></label>
+        </div>
+        <div class="acoes" style="margin-top:10px">
+          <button class="btn btn-confirmar" id="dt-ed-salvar" style="padding:7px 14px;font-size:.82rem">Salvar alterações</button>
+        </div>
+      </div>
       <div class="campo">
         <span>Observações (OPME, equipamentos — até 500 caracteres)</span>
         <textarea id="dt-obs" maxlength="500" rows="3" class="sel-status"
@@ -1667,6 +1679,36 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("ag-add-outro").addEventListener("click", () => addOutroProc("ag-proc", agItens, "ag-chips"));
   $("dt-fechar").addEventListener("click", () => { $("detalhe-fundo").hidden = true; });
   $("detalhe-fundo").addEventListener("click", (e) => { if (e.target.id === "detalhe-fundo") $("detalhe-fundo").hidden = true; });
+  $("dt-editar-btn").addEventListener("click", () => {
+    const area = $("dt-edit");
+    if (area.hidden && dtCirurgia) {
+      $("dt-ed-pac").value = dtCirurgia.paciente_nome || "";
+      $("dt-ed-hosp").value = dtCirurgia.hospital_ref || dtCirurgia.hospital_nome || "";
+      $("dt-ed-conv").value = dtCirurgia.convenio_ref || dtCirurgia.convenio_nome || "";
+      if (dtCirurgia.data_cirurgia) {
+        const d = new Date(dtCirurgia.data_cirurgia);
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        $("dt-ed-data").value = d.toISOString().slice(0, 16);
+      } else $("dt-ed-data").value = "";
+    }
+    area.hidden = !area.hidden;
+  });
+  $("dt-ed-salvar").addEventListener("click", async () => {
+    const btn = $("dt-ed-salvar");
+    if (btn.disabled || !dtCirurgia) return;
+    const dataTxt = $("dt-ed-data").value;
+    btn.disabled = true; btn.textContent = "Salvando…";
+    const { error } = await sb.from("cirurgias").update({
+      paciente_nome: $("dt-ed-pac").value.trim() || null,
+      hospital_nome: $("dt-ed-hosp").value.trim() || null,
+      convenio_nome: $("dt-ed-conv").value.trim() || null,
+      data_cirurgia: dataTxt ? new Date(dataTxt).toISOString() : dtCirurgia.data_cirurgia
+    }).eq("id", dtCirurgia.id);
+    btn.disabled = false; btn.textContent = "Salvar alterações";
+    if (error) { toast("Não foi possível salvar: " + error.message, true); return; }
+    toast("Dados atualizados.");
+    abrirDetalhe(dtCirurgia.id); carregarTudo();
+  });
   $("dt-obs").addEventListener("input", () => { $("dt-obs-conta").textContent = $("dt-obs").value.length + "/500"; });
   $("dt-obs-salvar").addEventListener("click", async () => {
     if (!dtCirurgia) return;
@@ -3416,6 +3458,7 @@ async function abrirDetalhe(cirurgiaId){
   const obsLegada = c.observacoes === "Agendado pelo dashboard" || c.observacoes === "Lançado manualmente pelo dashboard";
   $("dt-obs").value = obsLegada ? "" : (c.observacoes || "");
   $("dt-obs-conta").textContent = ($("dt-obs").value.length) + "/500";
+  $("dt-edit").hidden = true;
   $("detalhe-fundo").hidden = false;
   dtCarregarComposicao();
 }
