@@ -3363,6 +3363,7 @@ async function abrirDetalhe(cirurgiaId){
       (c.status === "cancelada" ? "Cirurgia cancelada" : "Na Fila de confirmação — confirme no Início") + '</span>';
     $("dt-pg-seg").innerHTML = "";
   }
+  const sitAtivo = (c.status === "paga" || isRealizada(c.status)) ? "realizada" : "nao";
   if (!bloqueada) [["nao","Não realizada"],["realizada","Realizada"]].forEach(([k, rot]) => {
     const b = document.createElement("button"); b.type = "button"; b.textContent = rot;
     if (k === sitAtivo) b.classList.add("ativo");
